@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Manrope:wght@500;700&display=swap');
+
+:root {
+  --bg: #f6f9ff;
+  --ink: #0f1b2d;
+  --accent: #ff7a18;
+  --accent-alt: #1d8e7f;
+  --panel: #ffffffd9;
+  --line: #dbe5f5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 10%, #ffe5c9 0%, transparent 30%),
+    radial-gradient(circle at 90% 20%, #ddf7f1 0%, transparent 35%),
+    var(--bg);
+  color: var(--ink);
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+
+.eyebrow {
+  font-family: 'Sora', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-alt);
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+legend {
+  font-family: 'Sora', sans-serif;
+}
+
+h1 {
+  margin: 0.4rem 0;
+}
+
+.subtitle {
+  margin: 0;
+  color: #334b67;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+button {
+  background: linear-gradient(120deg, var(--accent), #ff9865);
+  color: #fff;
+  border: 0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button.ghost {
+  background: #eaf1ff;
+  color: #273c58;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.panel {
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 14px 30px #1f2d3f12;
+}
+
+.checklist-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+label,
+fieldset {
+  display: grid;
+  gap: 0.35rem;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid #c9d6ec;
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.95rem;
+}
+
+fieldset {
+  border: 1px solid #d9e4f7;
+  border-radius: 0.8rem;
+  padding: 0.8rem;
+}
+
+.choice-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.toggle-group button {
+  background: #eef4ff;
+  color: #294163;
+}
+
+.toggle-group button.active {
+  background: linear-gradient(120deg, var(--accent-alt), #48cbb7);
+  color: #fff;
+}
+
+.checkbox-row {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+}
+
+.stat-card {
+  background: #f8fbff;
+  border: 1px solid #dbe8fb;
+  border-radius: 0.75rem;
+  padding: 0.7rem;
+}
+
+.stat-card p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.stat-card h3 {
+  margin: 0.25rem 0 0;
+}
+
+.section-title {
+  margin: 0.9rem 0 0.5rem;
+}
+
+.trend-bars {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.trend-bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 48px;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.bar-track {
+  width: 100%;
+  height: 12px;
+  background: #e9eef9;
+  border-radius: 999px;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1d8e7f, #62d9c4);
+  border-radius: 999px;
+}
+
+.history-table-wrapper {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  text-align: left;
+  padding: 0.52rem;
+  border-bottom: 1px solid #e3eaf7;
+  font-size: 0.92rem;
+}
+
+.error-banner {
+  margin-top: 0.8rem;
+  background: #ffebea;
+  border: 1px solid #ffc8c4;
+  color: #7a1d1d;
+  padding: 0.7rem;
+  border-radius: 0.6rem;
+}
+
+@media (max-width: 980px) {
+  .hero {
+    flex-direction: column;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

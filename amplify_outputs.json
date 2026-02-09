@@ -1,0 +1,36 @@
+{
+  "auth": {
+    "user_pool_id": "eu-west-1_qy9cFgzMy",
+    "aws_region": "eu-west-1",
+    "user_pool_client_id": "cm70nr2nhbd61mv9465jk9e1b",
+    "identity_pool_id": "eu-west-1:35cc9d8f-eed4-4628-b8b2-1a32e469c55b",
+    "mfa_methods": [],
+    "standard_required_attributes": [
+      "email",
+      "phone_number"
+    ],
+    "username_attributes": [
+      "email",
+      "phone_number"
+    ],
+    "user_verification_types": [
+      "email",
+      "phone_number"
+    ],
+    "groups": [],
+    "mfa_configuration": "NONE",
+    "password_policy": {
+      "min_length": 8,
+      "require_lowercase": true,
+      "require_numbers": true,
+      "require_symbols": true,
+      "require_uppercase": true
+    },
+    "unauthenticated_identities_enabled": true
+  },
+  "version": "1.4",
+  "custom": {
+    "region": "eu-west-1",
+    "tradingTrackerApiUrl": "https://1v69yzz4r5.execute-api.eu-west-1.amazonaws.com/prod/"
+  }
+}
