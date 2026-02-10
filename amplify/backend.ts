@@ -20,7 +20,6 @@ const backend = defineBackend({
 const apiStack = backend.tradingApi.stack;
 
 const checklistTable = new Table(apiStack, 'TradingChecklistTable', {
-  tableName: 'trading-precheck-sessions',
   partitionKey: {
     name: 'userId',
     type: AttributeType.STRING,
