@@ -5,6 +5,7 @@ Amplify Gen 2 web app for daily pre-trade checklist capture with:
 - Cognito registration/sign-in using email and mobile number
 - API Gateway + Lambda backend
 - DynamoDB persistence (multiple captures per day supported)
+- Session-level market analysis capture (mapped from market-analysis PDF)
 - Historical trends and readiness scoring
 
 ## Architecture
@@ -17,7 +18,10 @@ Amplify Gen 2 web app for daily pre-trade checklist capture with:
     - `POST /checks` save checklist capture
     - `GET /checks?days=30` list captures for signed-in user
     - `GET /checks/trends?days=30` aggregated trend report
-  - DynamoDB table (on-demand): `trading-precheck-sessions`
+    - `POST /analysis` save market analysis capture
+    - `GET /analysis?days=30` list market analyses for signed-in user
+    - `GET /analysis/trends?days=30` aggregated market-analysis trend report
+  - DynamoDB table (on-demand): deterministic per app/branch (`tradingtracker-<appId>-<branch>-sessions`)
 
 ## Amplify Branch/Pipeline Deployment (Gen 2)
 
@@ -42,6 +46,15 @@ This repo is now set up for Amplify branch deployments using `amplify.yml`.
 - File: `amplify.yml`
 - Backend deploy: `ampx pipeline-deploy`
 - Frontend publish dir: `dist`
+
+### DynamoDB stability strategy
+
+- Table name is now deterministic per Amplify app/branch in `amplify/backend.ts`:
+  - `tradingtracker-<appId>-<branch>-sessions`
+- This prevents branch collisions and avoids random table replacement on normal updates.
+- Table protections enabled:
+  - `RemovalPolicy.RETAIN`
+  - DynamoDB `deletionProtection: true`
 
 ## Local Development
 

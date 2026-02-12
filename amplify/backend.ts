@@ -19,7 +19,21 @@ const backend = defineBackend({
 
 const apiStack = backend.tradingApi.stack;
 
+const sanitizeNamePart = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9_.-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+const appIdPart = sanitizeNamePart(process.env.AWS_APP_ID ?? 'local').slice(0, 12) || 'local';
+const branchPart = sanitizeNamePart(
+  process.env.AWS_BRANCH ?? process.env.AMPLIFY_BRANCH ?? process.env.USER ?? 'sandbox',
+).slice(0, 30) || 'sandbox';
+const tableName = `tradingtracker-${appIdPart}-${branchPart}-sessions`;
+
 const checklistTable = new Table(apiStack, 'TradingChecklistTable', {
+  tableName,
   partitionKey: {
     name: 'userId',
     type: AttributeType.STRING,
@@ -29,6 +43,7 @@ const checklistTable = new Table(apiStack, 'TradingChecklistTable', {
     type: AttributeType.STRING,
   },
   billingMode: BillingMode.PAY_PER_REQUEST,
+  deletionProtection: true,
   pointInTimeRecoverySpecification: {
     pointInTimeRecoveryEnabled: true,
   },
@@ -64,6 +79,8 @@ const authorizer = new CognitoUserPoolsAuthorizer(apiStack, 'ApiCognitoAuthorize
 
 const checks = api.root.addResource('checks');
 const checksTrends = checks.addResource('trends');
+const analysis = api.root.addResource('analysis');
+const analysisTrends = analysis.addResource('trends');
 const integration = new LambdaIntegration(backend.tradingApi.resources.lambda);
 
 checks.addMethod('POST', integration, {
@@ -77,6 +94,21 @@ checks.addMethod('GET', integration, {
 });
 
 checksTrends.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+analysis.addMethod('POST', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+analysis.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+analysisTrends.addMethod('GET', integration, {
   authorizationType: AuthorizationType.COGNITO,
   authorizer,
 });

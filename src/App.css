@@ -90,6 +90,10 @@ button.ghost {
   gap: 1rem;
 }
 
+.market-section {
+  margin-top: 1rem;
+}
+
 .panel {
   background: var(--panel);
   backdrop-filter: blur(6px);
@@ -102,6 +106,29 @@ button.ghost {
 .checklist-form {
   display: grid;
   gap: 0.9rem;
+}
+
+.market-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+}
+
+.analysis-rows {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.analysis-row {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 0.6rem;
+  align-items: center;
 }
 
 label,
@@ -216,6 +243,23 @@ fieldset {
   border-radius: 999px;
 }
 
+.bar-fill.analysis {
+  background: linear-gradient(90deg, #d35400, #ffb366);
+}
+
+.market-structure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.market-structure-row {
+  display: grid;
+  grid-template-columns: 80px 110px 1fr;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .history-table-wrapper {
   max-height: 260px;
   overflow: auto;
@@ -253,6 +297,19 @@ fieldset {
   }
 
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-3,
+  .market-structure-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-row {
+    grid-template-columns: 1fr;
+  }
+
+  .market-structure-row {
     grid-template-columns: 1fr;
   }
 }
