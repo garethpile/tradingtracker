@@ -82,6 +82,21 @@ type MarketAnalysisPayload = {
   }>;
 };
 
+type TradeLogPayload = {
+  tradeDate: string;
+  sessionName?: string;
+  tradingAsset: string;
+  strategy: string;
+  riskRewardRatio?: number;
+  stopLossPips?: number;
+  takeProfitPips?: number;
+  totalProfit?: number;
+  feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
+  comments?: string;
+  chartLink?: string;
+  tradeStatus: 'open' | 'closed';
+};
+
 const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: {
@@ -170,6 +185,30 @@ const scoreAnalysis = (item: MarketAnalysisPayload): number => {
   return Number(weightedScore.toFixed(1));
 };
 
+const scoreTradeLog = (item: TradeLogPayload): number => {
+  const step1 = [
+    item.tradeDate,
+    item.tradingAsset,
+    item.strategy,
+    item.riskRewardRatio,
+    item.stopLossPips,
+    item.takeProfitPips,
+  ];
+
+  const step2 = [
+    item.totalProfit,
+    item.feelings,
+    item.comments,
+    item.chartLink,
+  ];
+
+  const step1Done = step1.filter((value) => value !== undefined && value !== '').length;
+  const step2Done = step2.filter((value) => value !== undefined && value !== '').length;
+
+  const weighted = (step1Done / step1.length) * 60 + (step2Done / step2.length) * 40;
+  return Number(weighted.toFixed(1));
+};
+
 const parseQueryDays = (daysParam?: string): number => {
   if (!daysParam) {
     return 30;
@@ -188,6 +227,31 @@ const getStartIsoForDays = (days: number): string => {
   now.setUTCHours(0, 0, 0, 0);
   now.setUTCDate(now.getUTCDate() - (days - 1));
   return now.toISOString();
+};
+
+const getWeekStart = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const day = date.getUTCDay();
+  const diff = (day + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - diff);
+  return date.toISOString().slice(0, 10);
+};
+
+const toNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
 };
 
 const buildTrendReport = (items: Array<Record<string, unknown>>) => {
@@ -317,6 +381,146 @@ const buildAnalysisTrendReport = (items: Array<Record<string, unknown>>) => {
   };
 };
 
+const buildTradeTrendReport = (items: Array<Record<string, unknown>>) => {
+  if (items.length === 0) {
+    return {
+      totalTrades: 0,
+      netProfit: 0,
+      winRate: 0,
+      averageRiskRewardRatio: 0,
+      averageJournalScore: 0,
+      weeklyStats: [],
+      byStrategy: [],
+      byAsset: [],
+    };
+  }
+
+  let netProfit = 0;
+  let closedTrades = 0;
+  let winningTrades = 0;
+  let rrTotal = 0;
+  let rrCount = 0;
+  let scoreTotal = 0;
+
+  const weekly = new Map<string, {
+    trades: number;
+    netProfit: number;
+    wins: number;
+    rrTotal: number;
+    rrCount: number;
+  }>();
+
+  const byStrategy = new Map<string, { trades: number; netProfit: number; wins: number; rrTotal: number; rrCount: number }>();
+  const byAsset = new Map<string, { trades: number; netProfit: number; wins: number; rrTotal: number; rrCount: number }>();
+
+  for (const item of items) {
+    const tradeDate = String(item.tradeDate ?? '');
+    const profit = toNumber(item.totalProfit);
+    const rr = toNumber(item.riskRewardRatio);
+    const journalScore = toNumber(item.journalScore) ?? 0;
+    const strategy = String(item.strategy ?? 'Unknown');
+    const asset = String(item.tradingAsset ?? 'Unknown');
+
+    scoreTotal += journalScore;
+
+    const isClosed = String(item.tradeStatus ?? 'open') === 'closed';
+    const isWin = isClosed && profit !== null && profit > 0;
+
+    if (profit !== null) {
+      netProfit += profit;
+    }
+
+    if (isClosed) {
+      closedTrades += 1;
+      if (isWin) {
+        winningTrades += 1;
+      }
+    }
+
+    if (rr !== null) {
+      rrTotal += rr;
+      rrCount += 1;
+    }
+
+    const weekKey = getWeekStart(tradeDate);
+    const week = weekly.get(weekKey) ?? {
+      trades: 0,
+      netProfit: 0,
+      wins: 0,
+      rrTotal: 0,
+      rrCount: 0,
+    };
+    week.trades += 1;
+    week.netProfit += profit ?? 0;
+    week.wins += isWin ? 1 : 0;
+    if (rr !== null) {
+      week.rrTotal += rr;
+      week.rrCount += 1;
+    }
+    weekly.set(weekKey, week);
+
+    const strategyRollup = byStrategy.get(strategy) ?? {
+      trades: 0,
+      netProfit: 0,
+      wins: 0,
+      rrTotal: 0,
+      rrCount: 0,
+    };
+    strategyRollup.trades += 1;
+    strategyRollup.netProfit += profit ?? 0;
+    strategyRollup.wins += isWin ? 1 : 0;
+    if (rr !== null) {
+      strategyRollup.rrTotal += rr;
+      strategyRollup.rrCount += 1;
+    }
+    byStrategy.set(strategy, strategyRollup);
+
+    const assetRollup = byAsset.get(asset) ?? {
+      trades: 0,
+      netProfit: 0,
+      wins: 0,
+      rrTotal: 0,
+      rrCount: 0,
+    };
+    assetRollup.trades += 1;
+    assetRollup.netProfit += profit ?? 0;
+    assetRollup.wins += isWin ? 1 : 0;
+    if (rr !== null) {
+      assetRollup.rrTotal += rr;
+      assetRollup.rrCount += 1;
+    }
+    byAsset.set(asset, assetRollup);
+  }
+
+  const toRollupArray = (source: Map<string, { trades: number; netProfit: number; wins: number; rrTotal: number; rrCount: number }>) =>
+    Array.from(source.entries()).map(([key, value]) => ({
+      name: key,
+      trades: value.trades,
+      netProfit: Number(value.netProfit.toFixed(2)),
+      winRate: Number(((value.wins / Math.max(value.trades, 1)) * 100).toFixed(1)),
+      averageRiskRewardRatio: Number(((value.rrTotal / Math.max(value.rrCount, 1))).toFixed(2)),
+    }));
+
+  return {
+    totalTrades: items.length,
+    netProfit: Number(netProfit.toFixed(2)),
+    winRate: Number(((winningTrades / Math.max(closedTrades, 1)) * 100).toFixed(1)),
+    averageRiskRewardRatio: Number((rrTotal / Math.max(rrCount, 1)).toFixed(2)),
+    averageJournalScore: Number((scoreTotal / items.length).toFixed(1)),
+    weeklyStats: Array.from(weekly.entries())
+      .map(([weekStart, value]) => ({
+        weekStart,
+        trades: value.trades,
+        netProfit: Number(value.netProfit.toFixed(2)),
+        winRate: Number(((value.wins / Math.max(value.trades, 1)) * 100).toFixed(1)),
+        averageRiskRewardRatio: Number((value.rrTotal / Math.max(value.rrCount, 1)).toFixed(2)),
+      }))
+      .sort((a, b) => a.weekStart.localeCompare(b.weekStart)),
+    byStrategy: toRollupArray(byStrategy).sort((a, b) => b.trades - a.trades),
+    byAsset: toRollupArray(byAsset).sort((a, b) => b.trades - a.trades),
+  };
+};
+
 export const handler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
@@ -387,6 +591,34 @@ export const handler = async (
     return json(201, item);
   }
 
+  if (routeKey.endsWith('POST /trades')) {
+    if (!event.body) {
+      return json(400, { message: 'Missing request body' });
+    }
+
+    const payload = JSON.parse(event.body) as TradeLogPayload;
+    const createdAt = new Date().toISOString();
+    const id = crypto.randomUUID();
+
+    const item = {
+      userId: userSub,
+      createdAt,
+      id,
+      itemType: 'TRADE_LOG',
+      ...payload,
+      journalScore: scoreTradeLog(payload),
+    };
+
+    await client.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: item,
+      }),
+    );
+
+    return json(201, item);
+  }
+
   if (routeKey.endsWith('GET /checks')) {
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
@@ -423,6 +655,29 @@ export const handler = async (
           ':userId': userSub,
           ':startIso': startIso,
           ':analysisItemType': 'MARKET_ANALYSIS',
+        },
+        ScanIndexForward: false,
+      }),
+    );
+
+    return json(200, {
+      items: result.Items ?? [],
+    });
+  }
+
+  if (routeKey.endsWith('GET /trades')) {
+    const days = parseQueryDays(event.queryStringParameters?.days);
+    const startIso = getStartIsoForDays(days);
+
+    const result = await client.send(
+      new QueryCommand({
+        TableName: tableName,
+        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+        FilterExpression: 'itemType = :tradeItemType',
+        ExpressionAttributeValues: {
+          ':userId': userSub,
+          ':startIso': startIso,
+          ':tradeItemType': 'TRADE_LOG',
         },
         ScanIndexForward: false,
       }),
@@ -476,6 +731,29 @@ export const handler = async (
     return json(200, {
       days,
       ...buildAnalysisTrendReport(result.Items ?? []),
+    });
+  }
+
+  if (routeKey.endsWith('GET /trades/trends')) {
+    const days = parseQueryDays(event.queryStringParameters?.days);
+    const startIso = getStartIsoForDays(days);
+
+    const result = await client.send(
+      new QueryCommand({
+        TableName: tableName,
+        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+        FilterExpression: 'itemType = :tradeItemType',
+        ExpressionAttributeValues: {
+          ':userId': userSub,
+          ':startIso': startIso,
+          ':tradeItemType': 'TRADE_LOG',
+        },
+      }),
+    );
+
+    return json(200, {
+      days,
+      ...buildTradeTrendReport(result.Items ?? []),
     });
   }
 

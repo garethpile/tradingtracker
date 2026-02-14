@@ -5,6 +5,8 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import outputs from '../amplify_outputs.json';
 import './App.css';
 
+type MenuTab = 'checklist' | 'analysis' | 'trades';
+
 type ChecklistItem = {
   id: string;
   createdAt: string;
@@ -101,6 +103,65 @@ type AnalysisTrendResponse = {
   dailyCompletion: Array<{ date: string; averageScore: number; analyses: number }>;
 };
 
+type TradeLogFormState = {
+  tradeDate: string;
+  sessionName: string;
+  tradingAsset: string;
+  strategy: string;
+  riskRewardRatio: string;
+  stopLossPips: string;
+  takeProfitPips: string;
+  totalProfit: string;
+  feelings: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
+  comments: string;
+  chartLink: string;
+  tradeStatus: 'open' | 'closed';
+};
+
+type TradeLogItem = {
+  id: string;
+  createdAt: string;
+  tradeDate: string;
+  sessionName?: string;
+  tradingAsset: string;
+  strategy: string;
+  riskRewardRatio?: number;
+  stopLossPips?: number;
+  takeProfitPips?: number;
+  totalProfit?: number;
+  feelings?: string;
+  comments?: string;
+  chartLink?: string;
+  tradeStatus: 'open' | 'closed';
+  journalScore: number;
+};
+
+type TradeRollup = {
+  name: string;
+  trades: number;
+  netProfit: number;
+  winRate: number;
+  averageRiskRewardRatio: number;
+};
+
+type TradeTrendResponse = {
+  days: number;
+  totalTrades: number;
+  netProfit: number;
+  winRate: number;
+  averageRiskRewardRatio: number;
+  averageJournalScore: number;
+  weeklyStats: Array<{
+    weekStart: string;
+    trades: number;
+    netProfit: number;
+    winRate: number;
+    averageRiskRewardRatio: number;
+  }>;
+  byStrategy: TradeRollup[];
+  byAsset: TradeRollup[];
+};
+
 type FormState = {
   tradingDate: string;
   sessionName: string;
@@ -126,7 +187,7 @@ type BooleanFormKey =
   | 'commitsRiskSizing'
   | 'commitsConfirmationOnly';
 
-const defaultForm = (): FormState => ({
+const defaultChecklistForm = (): FormState => ({
   tradingDate: new Date().toISOString().slice(0, 10),
   sessionName: 'London Open',
   environmentReady: true,
@@ -192,6 +253,21 @@ const defaultAnalysisForm = (): AnalysisFormState => ({
   })),
 });
 
+const defaultTradeForm = (): TradeLogFormState => ({
+  tradeDate: new Date().toISOString().slice(0, 10),
+  sessionName: 'London Open',
+  tradingAsset: 'XAUUSD',
+  strategy: '',
+  riskRewardRatio: '',
+  stopLossPips: '',
+  takeProfitPips: '',
+  totalProfit: '',
+  feelings: 'Not filled',
+  comments: '',
+  chartLink: '',
+  tradeStatus: 'open',
+});
+
 const outputConfig = {
   apiUrl: (outputs as { custom?: { tradingTrackerApiUrl?: string } }).custom?.tradingTrackerApiUrl
     || (import.meta.env.VITE_TRADING_API_URL as string | undefined)
@@ -213,44 +289,7 @@ const sentimentFields: Array<{ key: keyof AnalysisFormState; label: string }> = 
   { key: 'candleMonthly', label: 'Candle (Monthly)' },
 ];
 
-const buildAuthHeader = async () => {
-  const session = await fetchAuthSession();
-  const token = session.tokens?.idToken?.toString();
-
-  if (!token) {
-    throw new Error('No auth session token found');
-  }
-
-  return `Bearer ${token}`;
-};
-
-const apiCall = async <T,>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> => {
-  if (!outputConfig.apiUrl) {
-    throw new Error('API URL missing. Deploy backend and pull amplify_outputs.json.');
-  }
-
-  const authHeader = await buildAuthHeader();
-  const response = await fetch(`${outputConfig.apiUrl}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: authHeader,
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `API request failed with status ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-};
-
-const labelLookup: Array<{ key: BooleanFormKey; label: string; kind: 'question' | 'commitment' }> = [
+const checklistLabels: Array<{ key: BooleanFormKey; label: string; kind: 'question' | 'commitment' }> = [
   { key: 'environmentReady', label: 'Is my environment set up for this session?', kind: 'question' },
   { key: 'mentallyReady', label: 'Do I feel mentally ready for this session?', kind: 'question' },
   {
@@ -285,29 +324,81 @@ const labelLookup: Array<{ key: BooleanFormKey; label: string; kind: 'question' 
   },
 ];
 
+const toNumberOrUndefined = (value: string): number | undefined => {
+  if (value.trim().length === 0) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const buildAuthHeader = async () => {
+  const session = await fetchAuthSession();
+  const token = session.tokens?.idToken?.toString();
+
+  if (!token) {
+    throw new Error('No auth session token found');
+  }
+
+  return `Bearer ${token}`;
+};
+
+const apiCall = async <T,>(path: string, init?: RequestInit): Promise<T> => {
+  if (!outputConfig.apiUrl) {
+    throw new Error('API URL missing. Deploy backend and pull amplify_outputs.json.');
+  }
+
+  const authHeader = await buildAuthHeader();
+  const response = await fetch(`${outputConfig.apiUrl}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `API request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+};
+
 function App() {
   return (
     <Authenticator signUpAttributes={['email', 'phone_number']}>
-      {({ signOut, user }) => <TradingDashboard email={user?.signInDetails?.loginId ?? ''} onSignOut={signOut} />}
+      {({ signOut, user }) => (
+        <TradingDashboard email={user?.signInDetails?.loginId ?? ''} onSignOut={signOut} />
+      )}
     </Authenticator>
   );
 }
 
 function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (() => void) | undefined }) {
-  const [form, setForm] = useState<FormState>(defaultForm);
+  const [activeTab, setActiveTab] = useState<MenuTab>('checklist');
+  const [checklistForm, setChecklistForm] = useState<FormState>(defaultChecklistForm);
   const [analysisForm, setAnalysisForm] = useState<AnalysisFormState>(defaultAnalysisForm);
-  const [history, setHistory] = useState<ChecklistItem[]>([]);
+  const [tradeForm, setTradeForm] = useState<TradeLogFormState>(defaultTradeForm);
+
+  const [checklistHistory, setChecklistHistory] = useState<ChecklistItem[]>([]);
   const [analysisHistory, setAnalysisHistory] = useState<MarketAnalysisItem[]>([]);
-  const [trends, setTrends] = useState<TrendResponse | null>(null);
+  const [tradeHistory, setTradeHistory] = useState<TradeLogItem[]>([]);
+
+  const [checklistTrends, setChecklistTrends] = useState<TrendResponse | null>(null);
   const [analysisTrends, setAnalysisTrends] = useState<AnalysisTrendResponse | null>(null);
+  const [tradeTrends, setTradeTrends] = useState<TradeTrendResponse | null>(null);
+
   const [days, setDays] = useState(30);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const readinessPreview = useMemo(() => {
-    const fields = labelLookup.map((item) => form[item.key]);
+  const checklistPreview = useMemo(() => {
+    const fields = checklistLabels.map((item) => checklistForm[item.key]);
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
-  }, [form]);
+  }, [checklistForm]);
 
   useEffect(() => {
     void refresh(days);
@@ -315,17 +406,35 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   }, []);
 
   const loadData = async (windowDays = days) => {
-    const [checksRes, trendsRes, analysisRes, analysisTrendsRes] = await Promise.all([
+    const [checksRes, checksTrendRes, analysisRes, analysisTrendRes, tradesRes, tradesTrendRes] = await Promise.all([
       apiCall<{ items: ChecklistItem[] }>(`checks?days=${windowDays}`),
       apiCall<TrendResponse>(`checks/trends?days=${windowDays}`),
       apiCall<{ items: MarketAnalysisItem[] }>(`analysis?days=${windowDays}`),
       apiCall<AnalysisTrendResponse>(`analysis/trends?days=${windowDays}`),
+      apiCall<{ items: TradeLogItem[] }>(`trades?days=${windowDays}`),
+      apiCall<TradeTrendResponse>(`trades/trends?days=${windowDays}`),
     ]);
 
-    setHistory(checksRes.items);
-    setTrends(trendsRes);
+    setChecklistHistory(checksRes.items);
+    setChecklistTrends(checksTrendRes);
     setAnalysisHistory(analysisRes.items);
-    setAnalysisTrends(analysisTrendsRes);
+    setAnalysisTrends(analysisTrendRes);
+    setTradeHistory(tradesRes.items);
+    setTradeTrends(tradesTrendRes);
+  };
+
+  const refresh = async (nextDays: number) => {
+    setBusy(true);
+    setError(null);
+
+    try {
+      setDays(nextDays);
+      await loadData(nextDays);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load dashboard data');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const saveChecklist = async (event: FormEvent) => {
@@ -336,9 +445,9 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     try {
       await apiCall<ChecklistItem>('checks', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify(checklistForm),
       });
-      setForm(defaultForm());
+      setChecklistForm(defaultChecklistForm());
       await loadData();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save checklist');
@@ -347,7 +456,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     }
   };
 
-  const saveMarketAnalysis = async (event: FormEvent) => {
+  const saveAnalysis = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError(null);
@@ -366,15 +475,26 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     }
   };
 
-  const refresh = async (nextDays: number) => {
+  const saveTradeLog = async (event: FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setError(null);
 
     try {
-      setDays(nextDays);
-      await loadData(nextDays);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load dashboard data');
+      await apiCall<TradeLogItem>('trades', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...tradeForm,
+          riskRewardRatio: toNumberOrUndefined(tradeForm.riskRewardRatio),
+          stopLossPips: toNumberOrUndefined(tradeForm.stopLossPips),
+          takeProfitPips: toNumberOrUndefined(tradeForm.takeProfitPips),
+          totalProfit: toNumberOrUndefined(tradeForm.totalProfit),
+        }),
+      });
+      setTradeForm(defaultTradeForm());
+      await loadData();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save trade log');
     } finally {
       setBusy(false);
     }
@@ -382,542 +502,370 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
 
   return (
     <main className="page">
-      <section className="hero">
-        <div>
-          <p className="eyebrow">Trading Tracker</p>
-          <h1>Daily Pre-Trade Checklist and Market Analysis</h1>
-          <p className="subtitle">
-            Capture readiness and session-level market structure, then review analysis quality trends over time.
-          </p>
+      <header className="header-shell">
+        <div className="header-top">
+          <h1>Trading Tracker</h1>
+          <div className="hero-actions">
+            <span>{email}</span>
+            <button onClick={() => void refresh(days)} disabled={busy}>Refresh</button>
+            <button className="ghost" onClick={onSignOut}>Sign out</button>
+          </div>
         </div>
-        <div className="hero-actions">
-          <span>{email}</span>
-          <button onClick={() => void refresh(days)} disabled={busy}>
-            Refresh
-          </button>
-          <button className="ghost" onClick={onSignOut}>
-            Sign out
-          </button>
-        </div>
-      </section>
+        <nav className="menu-tabs" aria-label="Dashboard sections">
+          <button className={activeTab === 'checklist' ? 'tab active' : 'tab'} onClick={() => setActiveTab('checklist')}>Checklist</button>
+          <button className={activeTab === 'analysis' ? 'tab active' : 'tab'} onClick={() => setActiveTab('analysis')}>Analysis</button>
+          <button className={activeTab === 'trades' ? 'tab active' : 'tab'} onClick={() => setActiveTab('trades')}>Trade Logs</button>
+          <label className="window-select">
+            Window
+            <select value={days} onChange={(event) => void refresh(Number(event.target.value))} disabled={busy}>
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+            </select>
+          </label>
+        </nav>
+      </header>
 
-      <section className="content-grid">
-        <article className="panel">
-          <h2>Capture Checklist</h2>
-          <form onSubmit={saveChecklist} className="checklist-form">
-            <label>
-              Date
-              <input
-                type="date"
-                value={form.tradingDate}
-                onChange={(event) => setForm((prev) => ({ ...prev, tradingDate: event.target.value }))}
-                required
-              />
-            </label>
+      {activeTab === 'checklist' && (
+        <section className="content-grid">
+          <article className="panel">
+            <h2>Capture Checklist</h2>
+            <form onSubmit={saveChecklist} className="checklist-form">
+              <label>
+                Date
+                <input
+                  type="date"
+                  value={checklistForm.tradingDate}
+                  onChange={(event) => setChecklistForm((prev) => ({ ...prev, tradingDate: event.target.value }))}
+                  required
+                />
+              </label>
 
-            <label>
-              Session
-              <select
-                value={form.sessionName}
-                onChange={(event) => setForm((prev) => ({ ...prev, sessionName: event.target.value }))}
-              >
-                <option>London Open</option>
-                <option>New York Open</option>
-                <option>Asia Session</option>
-                <option>Custom</option>
-              </select>
-            </label>
+              <label>
+                Session
+                <select
+                  value={checklistForm.sessionName}
+                  onChange={(event) => setChecklistForm((prev) => ({ ...prev, sessionName: event.target.value }))}
+                >
+                  <option>London Open</option>
+                  <option>New York Open</option>
+                  <option>Asia Session</option>
+                  <option>Custom</option>
+                </select>
+              </label>
 
-            <fieldset>
-              <legend>Self Evaluation</legend>
-              {labelLookup
-                .filter((item) => item.kind === 'question')
-                .map((item) => (
+              <fieldset>
+                <legend>Self Evaluation</legend>
+                {checklistLabels.filter((item) => item.kind === 'question').map((item) => (
                   <div key={item.key} className="choice-row">
                     <span>{item.label}</span>
                     <div className="toggle-group">
-                      <button
-                        type="button"
-                        className={form[item.key] ? 'active' : ''}
-                        onClick={() => setForm((prev) => ({ ...prev, [item.key]: true }))}
-                      >
-                        Yes
-                      </button>
-                      <button
-                        type="button"
-                        className={!form[item.key] ? 'active' : ''}
-                        onClick={() => setForm((prev) => ({ ...prev, [item.key]: false }))}
-                      >
-                        No
-                      </button>
+                      <button type="button" className={checklistForm[item.key] ? 'active' : ''} onClick={() => setChecklistForm((prev) => ({ ...prev, [item.key]: true }))}>Yes</button>
+                      <button type="button" className={!checklistForm[item.key] ? 'active' : ''} onClick={() => setChecklistForm((prev) => ({ ...prev, [item.key]: false }))}>No</button>
                     </div>
                   </div>
                 ))}
-            </fieldset>
+              </fieldset>
 
-            <fieldset>
-              <legend>Commitments</legend>
-              {labelLookup
-                .filter((item) => item.kind === 'commitment')
-                .map((item) => (
+              <fieldset>
+                <legend>Commitments</legend>
+                {checklistLabels.filter((item) => item.kind === 'commitment').map((item) => (
                   <label className="checkbox-row" key={item.key}>
                     <input
                       type="checkbox"
-                      checked={form[item.key]}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, [item.key]: event.target.checked }))
-                      }
+                      checked={checklistForm[item.key]}
+                      onChange={(event) => setChecklistForm((prev) => ({ ...prev, [item.key]: event.target.checked }))}
                     />
                     <span>{item.label}</span>
                   </label>
                 ))}
-            </fieldset>
+              </fieldset>
 
-            <label>
-              Signature
-              <input
-                type="text"
-                placeholder="Type your name"
-                value={form.signature}
-                onChange={(event) => setForm((prev) => ({ ...prev, signature: event.target.value }))}
-                required
-              />
-            </label>
+              <label>
+                Signature
+                <input
+                  type="text"
+                  value={checklistForm.signature}
+                  onChange={(event) => setChecklistForm((prev) => ({ ...prev, signature: event.target.value }))}
+                  required
+                />
+              </label>
 
-            <label>
-              Notes
-              <textarea
-                rows={3}
-                placeholder="Optional context"
-                value={form.notes}
-                onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-              />
-            </label>
+              <label>
+                Notes
+                <textarea rows={3} value={checklistForm.notes} onChange={(event) => setChecklistForm((prev) => ({ ...prev, notes: event.target.value }))} />
+              </label>
 
-            <div className="form-footer">
-              <span>Readiness score preview: {readinessPreview}%</span>
-              <button type="submit" disabled={busy}>
-                Save Checklist
-              </button>
-            </div>
-          </form>
-        </article>
-
-        <article className="panel">
-          <h2>Checklist Trends</h2>
-          <div className="panel-header">
-            <span />
-            <label>
-              Time window
-              <select
-                value={days}
-                onChange={(event) => void refresh(Number(event.target.value))}
-                disabled={busy}
-              >
-                <option value={7}>Last 7 days</option>
-                <option value={30}>Last 30 days</option>
-                <option value={90}>Last 90 days</option>
-              </select>
-            </label>
-          </div>
-
-          {trends ? (
-            <>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <p>Total Captures</p>
-                  <h3>{trends.totalCaptures}</h3>
-                </div>
-                <div className="stat-card">
-                  <p>Average Readiness Score</p>
-                  <h3>{trends.averageScore}%</h3>
-                </div>
-                <div className="stat-card">
-                  <p>Environment Ready Rate</p>
-                  <h3>{trends.readinessRates.environmentReady ?? 0}%</h3>
-                </div>
+              <div className="form-footer">
+                <span>Readiness score preview: {checklistPreview}%</span>
+                <button type="submit" disabled={busy}>Save Checklist</button>
               </div>
+            </form>
+          </article>
 
-              <h3 className="section-title">Daily Score Trend</h3>
-              <div className="trend-bars">
-                {trends.dailyScores.map((item) => (
-                  <div key={item.date} className="trend-bar-row">
-                    <span>{item.date}</span>
-                    <div className="bar-track">
-                      <div className="bar-fill" style={{ width: `${item.averageScore}%` }} />
+          <article className="panel">
+            <h2>Checklist Trends</h2>
+            {checklistTrends ? (
+              <>
+                <div className="stats-grid">
+                  <div className="stat-card"><p>Total Captures</p><h3>{checklistTrends.totalCaptures}</h3></div>
+                  <div className="stat-card"><p>Average Score</p><h3>{checklistTrends.averageScore}%</h3></div>
+                  <div className="stat-card"><p>Environment Ready</p><h3>{checklistTrends.readinessRates.environmentReady ?? 0}%</h3></div>
+                </div>
+                <h3 className="section-title">Daily Score Trend</h3>
+                <div className="trend-bars">
+                  {checklistTrends.dailyScores.map((item) => (
+                    <div key={item.date} className="trend-bar-row">
+                      <span>{item.date}</span>
+                      <div className="bar-track"><div className="bar-fill" style={{ width: `${item.averageScore}%` }} /></div>
+                      <span>{item.averageScore}%</span>
                     </div>
-                    <span>{item.averageScore}%</span>
-                  </div>
-                ))}
-                {trends.dailyScores.length === 0 && <p>No captures yet.</p>}
+                  ))}
+                </div>
+                <h3 className="section-title">Recent Captures</h3>
+                <div className="history-table-wrapper">
+                  <table className="history-table">
+                    <thead><tr><th>Date</th><th>Session</th><th>Score</th><th>Signature</th></tr></thead>
+                    <tbody>
+                      {checklistHistory.map((item) => (
+                        <tr key={item.id}><td>{item.tradingDate}</td><td>{item.sessionName ?? '-'}</td><td>{item.score}%</td><td>{item.signature}</td></tr>
+                      ))}
+                      {checklistHistory.length === 0 && <tr><td colSpan={4}>No entries in this period.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : <p>Load data to view trends.</p>}
+          </article>
+        </section>
+      )}
+
+      {activeTab === 'analysis' && (
+        <>
+          <section className="panel market-section">
+            <h2>Capture Market Analysis</h2>
+            <form className="market-form" onSubmit={saveAnalysis}>
+              <div className="grid-3">
+                <label>Pair<input type="text" value={analysisForm.pair} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, pair: event.target.value }))} required /></label>
+                <label>Date<input type="date" value={analysisForm.tradingDate} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingDate: event.target.value }))} required /></label>
+                <label>Session<select value={analysisForm.sessionName} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
               </div>
 
-              <h3 className="section-title">Recent Checklist Captures</h3>
-              <div className="history-table-wrapper">
-                <table className="history-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Session</th>
-                      <th>Score</th>
-                      <th>Signature</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.tradingDate}</td>
-                        <td>{item.sessionName ?? '-'}</td>
-                        <td>{item.score}%</td>
-                        <td>{item.signature}</td>
-                      </tr>
-                    ))}
-                    {history.length === 0 && (
-                      <tr>
-                        <td colSpan={4}>No entries in this period.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <p>Load data to view trends.</p>
-          )}
-        </article>
-      </section>
-
-      <section className="panel market-section">
-        <h2>Capture Market Analysis</h2>
-        <form className="market-form" onSubmit={saveMarketAnalysis}>
-          <div className="grid-3">
-            <label>
-              Pair
-              <input
-                type="text"
-                value={analysisForm.pair}
-                onChange={(event) => setAnalysisForm((prev) => ({ ...prev, pair: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              Date
-              <input
-                type="date"
-                value={analysisForm.tradingDate}
-                onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingDate: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              Session
-              <select
-                value={analysisForm.sessionName}
-                onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sessionName: event.target.value }))}
-              >
-                <option>London Open</option>
-                <option>New York Open</option>
-                <option>Asia Session</option>
-                <option>Custom</option>
-              </select>
-            </label>
-          </div>
-
-          <fieldset>
-            <legend>Pre-Market Checklist</legend>
-            <div className="analysis-rows">
-              {sentimentFields.map((field) => (
-                <label key={field.key} className="analysis-row">
-                  <span>{field.label}</span>
-                  <select
-                    value={analysisForm[field.key] as string}
-                    onChange={(event) => setAnalysisForm((prev) => ({
-                      ...prev,
-                      [field.key]: event.target.value,
-                    }))}
-                  >
-                    <option value="bullish">Bullish</option>
-                    <option value="bearish">Bearish</option>
-                    <option value="consolidation">Consolidation</option>
-                    <option value="none">None</option>
+              <fieldset>
+                <legend>Pre-Market Checklist</legend>
+                <div className="analysis-rows">
+                  {sentimentFields.map((field) => (
+                    <label key={field.key} className="analysis-row">
+                      <span>{field.label}</span>
+                      <select value={analysisForm[field.key] as string} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, [field.key]: event.target.value }))}>
+                        <option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="none">None</option>
+                      </select>
+                    </label>
+                  ))}
+                </div>
+                <label>
+                  Conclusion
+                  <select value={analysisForm.conclusion} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, conclusion: event.target.value as AnalysisFormState['conclusion'] }))}>
+                    <option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="bearishConsolidation">Bearish Consolidation</option><option value="bullishConsolidation">Bullish Consolidation</option>
                   </select>
                 </label>
-              ))}
-            </div>
-            <label>
-              Conclusion
-              <select
-                value={analysisForm.conclusion}
-                onChange={(event) => setAnalysisForm((prev) => ({
-                  ...prev,
-                  conclusion: event.target.value as AnalysisFormState['conclusion'],
-                }))}
-              >
-                <option value="bullish">Bullish</option>
-                <option value="bearish">Bearish</option>
-                <option value="consolidation">Consolidation</option>
-                <option value="bearishConsolidation">Bearish Consolidation</option>
-                <option value="bullishConsolidation">Bullish Consolidation</option>
-              </select>
-            </label>
-          </fieldset>
+              </fieldset>
 
-          <fieldset>
-            <legend>Price Action and News</legend>
-            <div className="grid-3">
-              <label>
-                Prev day low
-                <input value={analysisForm.prevDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayLow: event.target.value }))} />
-              </label>
-              <label>
-                Prev day high
-                <input value={analysisForm.prevDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayHigh: event.target.value }))} />
-              </label>
-              <label>
-                Futures price
-                <input value={analysisForm.futuresPrice} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, futuresPrice: event.target.value }))} />
-              </label>
-              <label>
-                Current day low
-                <input value={analysisForm.currentDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayLow: event.target.value }))} />
-              </label>
-              <label>
-                Current day high
-                <input value={analysisForm.currentDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayHigh: event.target.value }))} />
-              </label>
-              <label>
-                News time (GMT+2)
-                <input value={analysisForm.newsTime} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsTime: event.target.value }))} />
-              </label>
-            </div>
-            <div className="grid-3">
-              <label>
-                Red folder news
-                <select
-                  value={analysisForm.redFolderNews ? 'yes' : 'no'}
-                  onChange={(event) => setAnalysisForm((prev) => ({ ...prev, redFolderNews: event.target.value === 'yes' }))}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-              <label>
-                News impact
-                <select
-                  value={analysisForm.newsImpact}
-                  onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsImpact: event.target.value as Impact }))}
-                >
-                  <option value="high">High</option>
-                  <option value="low">Low</option>
-                </select>
-              </label>
-              <label>
-                Current trend
-                <select
-                  value={analysisForm.currentTrend}
-                  onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentTrend: event.target.value as AnalysisDirection }))}
-                >
-                  <option value="bullish">Bullish</option>
-                  <option value="bearish">Bearish</option>
-                  <option value="consolidation">Consolidation</option>
-                  <option value="none">None</option>
-                </select>
-              </label>
-            </div>
-            <label>
-              Price action notes
-              <textarea rows={2} value={analysisForm.priceActionNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, priceActionNotes: event.target.value }))} />
-            </label>
-            <label>
-              News notes
-              <textarea rows={2} value={analysisForm.newsNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsNotes: event.target.value }))} />
-            </label>
-          </fieldset>
-
-          <fieldset>
-            <legend>Pullback / Trading Notes</legend>
-            <div className="grid-3">
-              <label>
-                Sell RSI level (overbought)
-                <input value={analysisForm.sellRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellRsiLevel: event.target.value }))} />
-              </label>
-              <label>
-                Buy RSI level (oversold)
-                <input value={analysisForm.buyRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyRsiLevel: event.target.value }))} />
-              </label>
-              <label>
-                Has a clear trend
-                <select
-                  value={analysisForm.hasClearTrend ? 'yes' : 'no'}
-                  onChange={(event) => setAnalysisForm((prev) => ({ ...prev, hasClearTrend: event.target.value === 'yes' }))}
-                >
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </label>
-            </div>
-            <div className="grid-3">
-              <label>
-                Directional bias
-                <select
-                  value={analysisForm.directionalBias}
-                  onChange={(event) => setAnalysisForm((prev) => ({ ...prev, directionalBias: event.target.value as AnalysisFormState['directionalBias'] }))}
-                >
-                  <option value="bullish">Bullish</option>
-                  <option value="bearish">Bearish</option>
-                  <option value="none">None</option>
-                </select>
-              </label>
-              <label>
-                Trading style
-                <select
-                  value={analysisForm.tradingStyle}
-                  onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingStyle: event.target.value as AnalysisFormState['tradingStyle'] }))}
-                >
-                  <option value="trend">Trend</option>
-                  <option value="consolidation">Consolidation</option>
-                </select>
-              </label>
-            </div>
-            <label>
-              Trading notes
-              <textarea rows={2} value={analysisForm.tradingNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingNotes: event.target.value }))} />
-            </label>
-          </fieldset>
-
-          <fieldset>
-            <legend>Zones</legend>
-            <div className="grid-3">
-              <label>Potential sell zone 1<input value={analysisForm.sellZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone1: event.target.value }))} /></label>
-              <label>Potential sell zone 2<input value={analysisForm.sellZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone2: event.target.value }))} /></label>
-              <label>Potential sell zone 3<input value={analysisForm.sellZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone3: event.target.value }))} /></label>
-              <label>Potential buy zone 1<input value={analysisForm.buyZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone1: event.target.value }))} /></label>
-              <label>Potential buy zone 2<input value={analysisForm.buyZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone2: event.target.value }))} /></label>
-              <label>Potential buy zone 3<input value={analysisForm.buyZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone3: event.target.value }))} /></label>
-              <label>Reversal zone 1<input value={analysisForm.reversalZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone1: event.target.value }))} /></label>
-              <label>Reversal zone 2<input value={analysisForm.reversalZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone2: event.target.value }))} /></label>
-              <label>Swing zone 1<input value={analysisForm.swingZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone1: event.target.value }))} /></label>
-              <label>Swing zone 2<input value={analysisForm.swingZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone2: event.target.value }))} /></label>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Market Structure</legend>
-            <div className="market-structure-grid">
-              {analysisForm.marketStructure.map((row, index) => (
-                <div key={row.rangeName} className="market-structure-row">
-                  <span>{row.rangeName}</span>
-                  <select
-                    value={row.bias}
-                    onChange={(event) =>
-                      setAnalysisForm((prev) => ({
-                        ...prev,
-                        marketStructure: prev.marketStructure.map((item, itemIndex) => (
-                          itemIndex === index
-                            ? { ...item, bias: event.target.value as MarketStructureBias }
-                            : item
-                        )),
-                      }))
-                    }
-                  >
-                    <option value="none">None</option>
-                    <option value="buy">Buy</option>
-                    <option value="sell">Sell</option>
-                  </select>
-                  <input
-                    value={row.level}
-                    placeholder="Level"
-                    onChange={(event) =>
-                      setAnalysisForm((prev) => ({
-                        ...prev,
-                        marketStructure: prev.marketStructure.map((item, itemIndex) => (
-                          itemIndex === index
-                            ? { ...item, level: event.target.value }
-                            : item
-                        )),
-                      }))
-                    }
-                  />
+              <fieldset>
+                <legend>Price Action / News / Notes</legend>
+                <div className="grid-3">
+                  <label>Prev day low<input value={analysisForm.prevDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayLow: event.target.value }))} /></label>
+                  <label>Prev day high<input value={analysisForm.prevDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayHigh: event.target.value }))} /></label>
+                  <label>Futures price<input value={analysisForm.futuresPrice} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, futuresPrice: event.target.value }))} /></label>
+                  <label>Current day low<input value={analysisForm.currentDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayLow: event.target.value }))} /></label>
+                  <label>Current day high<input value={analysisForm.currentDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayHigh: event.target.value }))} /></label>
+                  <label>News time (GMT+2)<input value={analysisForm.newsTime} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsTime: event.target.value }))} /></label>
                 </div>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="form-footer">
-            <span />
-            <button type="submit" disabled={busy}>Save Market Analysis</button>
-          </div>
-        </form>
-      </section>
-
-      <section className="panel">
-        <h2>Market Analysis Trends</h2>
-        {analysisTrends ? (
-          <>
-            <div className="stats-grid">
-              <div className="stat-card">
-                <p>Total Analyses</p>
-                <h3>{analysisTrends.totalAnalyses}</h3>
-              </div>
-              <div className="stat-card">
-                <p>Avg Completion</p>
-                <h3>{analysisTrends.averageCompletionScore}%</h3>
-              </div>
-              <div className="stat-card">
-                <p>Bullish Conclusion Rate</p>
-                <h3>{analysisTrends.conclusionMix.bullish ?? 0}%</h3>
-              </div>
-            </div>
-
-            <h3 className="section-title">Daily Analysis Completion</h3>
-            <div className="trend-bars">
-              {analysisTrends.dailyCompletion.map((item) => (
-                <div key={item.date} className="trend-bar-row">
-                  <span>{item.date}</span>
-                  <div className="bar-track">
-                    <div className="bar-fill analysis" style={{ width: `${item.averageScore}%` }} />
-                  </div>
-                  <span>{item.averageScore}%</span>
+                <div className="grid-3">
+                  <label>Red folder news<select value={analysisForm.redFolderNews ? 'yes' : 'no'} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, redFolderNews: event.target.value === 'yes' }))}><option value="yes">Yes</option><option value="no">No</option></select></label>
+                  <label>News impact<select value={analysisForm.newsImpact} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsImpact: event.target.value as Impact }))}><option value="high">High</option><option value="low">Low</option></select></label>
+                  <label>Current trend<select value={analysisForm.currentTrend} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentTrend: event.target.value as AnalysisDirection }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="none">None</option></select></label>
                 </div>
-              ))}
-              {analysisTrends.dailyCompletion.length === 0 && <p>No market analyses yet.</p>}
-            </div>
+                <label>Price action notes<textarea rows={2} value={analysisForm.priceActionNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, priceActionNotes: event.target.value }))} /></label>
+                <label>News notes<textarea rows={2} value={analysisForm.newsNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsNotes: event.target.value }))} /></label>
+              </fieldset>
 
-            <h3 className="section-title">Recent Market Analyses</h3>
-            <div className="history-table-wrapper">
-              <table className="history-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Session</th>
-                    <th>Pair</th>
-                    <th>Conclusion</th>
-                    <th>Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analysisHistory.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.tradingDate}</td>
-                      <td>{item.sessionName}</td>
-                      <td>{item.pair}</td>
-                      <td>{item.conclusion}</td>
-                      <td>{item.analysisScore}%</td>
-                    </tr>
+              <fieldset>
+                <legend>Zones / Market Structure</legend>
+                <div className="grid-3">
+                  <label>Sell zone 1<input value={analysisForm.sellZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone1: event.target.value }))} /></label>
+                  <label>Sell zone 2<input value={analysisForm.sellZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone2: event.target.value }))} /></label>
+                  <label>Sell zone 3<input value={analysisForm.sellZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone3: event.target.value }))} /></label>
+                  <label>Buy zone 1<input value={analysisForm.buyZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone1: event.target.value }))} /></label>
+                  <label>Buy zone 2<input value={analysisForm.buyZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone2: event.target.value }))} /></label>
+                  <label>Buy zone 3<input value={analysisForm.buyZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone3: event.target.value }))} /></label>
+                  <label>Reversal zone 1<input value={analysisForm.reversalZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone1: event.target.value }))} /></label>
+                  <label>Reversal zone 2<input value={analysisForm.reversalZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone2: event.target.value }))} /></label>
+                  <label>Swing zone 1<input value={analysisForm.swingZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone1: event.target.value }))} /></label>
+                  <label>Swing zone 2<input value={analysisForm.swingZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone2: event.target.value }))} /></label>
+                </div>
+                <div className="market-structure-grid">
+                  {analysisForm.marketStructure.map((row, index) => (
+                    <div key={row.rangeName} className="market-structure-row">
+                      <span>{row.rangeName}</span>
+                      <select value={row.bias} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, idx) => idx === index ? { ...entry, bias: event.target.value as MarketStructureBias } : entry) }))}>
+                        <option value="none">None</option><option value="buy">Buy</option><option value="sell">Sell</option>
+                      </select>
+                      <input value={row.level} placeholder="Level" onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, idx) => idx === index ? { ...entry, level: event.target.value } : entry) }))} />
+                    </div>
                   ))}
-                  {analysisHistory.length === 0 && (
-                    <tr>
-                      <td colSpan={5}>No analyses in this period.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-          <p>Load data to view analysis trends.</p>
-        )}
-      </section>
+                </div>
+              </fieldset>
+
+              <div className="form-footer"><span /><button type="submit" disabled={busy}>Save Market Analysis</button></div>
+            </form>
+          </section>
+
+          <section className="panel">
+            <h2>Market Analysis Trends</h2>
+            {analysisTrends ? (
+              <>
+                <div className="stats-grid">
+                  <div className="stat-card"><p>Total Analyses</p><h3>{analysisTrends.totalAnalyses}</h3></div>
+                  <div className="stat-card"><p>Avg Completion</p><h3>{analysisTrends.averageCompletionScore}%</h3></div>
+                  <div className="stat-card"><p>Bullish Conclusion</p><h3>{analysisTrends.conclusionMix.bullish ?? 0}%</h3></div>
+                </div>
+                <h3 className="section-title">Daily Analysis Completion</h3>
+                <div className="trend-bars">
+                  {analysisTrends.dailyCompletion.map((item) => (
+                    <div key={item.date} className="trend-bar-row">
+                      <span>{item.date}</span>
+                      <div className="bar-track"><div className="bar-fill analysis" style={{ width: `${item.averageScore}%` }} /></div>
+                      <span>{item.averageScore}%</span>
+                    </div>
+                  ))}
+                </div>
+                <h3 className="section-title">Recent Analyses</h3>
+                <div className="history-table-wrapper">
+                  <table className="history-table">
+                    <thead><tr><th>Date</th><th>Session</th><th>Pair</th><th>Conclusion</th><th>Score</th></tr></thead>
+                    <tbody>
+                      {analysisHistory.map((item) => (
+                        <tr key={item.id}><td>{item.tradingDate}</td><td>{item.sessionName}</td><td>{item.pair}</td><td>{item.conclusion}</td><td>{item.analysisScore}%</td></tr>
+                      ))}
+                      {analysisHistory.length === 0 && <tr><td colSpan={5}>No analyses in this period.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : <p>Load data to view analysis trends.</p>}
+          </section>
+        </>
+      )}
+
+      {activeTab === 'trades' && (
+        <>
+          <section className="panel">
+            <h2>Trading Journal</h2>
+            <p className="subtitle">Step 1 after opening: date, asset, strategy, R/R, SL, TP. Step 2 after closing: total profit, feelings, comments, and chart link. Step 3: weekly net profit, win rate, and average R/R are calculated automatically.</p>
+            <form className="market-form" onSubmit={saveTradeLog}>
+              <fieldset>
+                <legend>Step 1: Open Position Details</legend>
+                <div className="grid-3">
+                  <label>Date<input type="date" value={tradeForm.tradeDate} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeDate: event.target.value }))} required /></label>
+                  <label>Session<select value={tradeForm.sessionName} onChange={(event) => setTradeForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
+                  <label>Trading asset<input value={tradeForm.tradingAsset} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradingAsset: event.target.value }))} required /></label>
+                  <label>Strategy<input value={tradeForm.strategy} onChange={(event) => setTradeForm((prev) => ({ ...prev, strategy: event.target.value }))} required /></label>
+                  <label>Reward from R/R ratio (1:X)<input type="number" step="0.01" value={tradeForm.riskRewardRatio} onChange={(event) => setTradeForm((prev) => ({ ...prev, riskRewardRatio: event.target.value }))} /></label>
+                  <label>Stop loss (pips)<input type="number" step="0.01" value={tradeForm.stopLossPips} onChange={(event) => setTradeForm((prev) => ({ ...prev, stopLossPips: event.target.value }))} /></label>
+                  <label>Take profit (pips)<input type="number" step="0.01" value={tradeForm.takeProfitPips} onChange={(event) => setTradeForm((prev) => ({ ...prev, takeProfitPips: event.target.value }))} /></label>
+                  <label>Trade status<select value={tradeForm.tradeStatus} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeStatus: event.target.value as TradeLogFormState['tradeStatus'] }))}><option value="open">Open</option><option value="closed">Closed</option></select></label>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend>Step 2: Close Position Details</legend>
+                <div className="grid-3">
+                  <label>Total profit<input type="number" step="0.01" value={tradeForm.totalProfit} onChange={(event) => setTradeForm((prev) => ({ ...prev, totalProfit: event.target.value }))} /></label>
+                  <label>Feelings<select value={tradeForm.feelings} onChange={(event) => setTradeForm((prev) => ({ ...prev, feelings: event.target.value as TradeLogFormState['feelings'] }))}><option>Satisfied</option><option>Neutral</option><option>Disappointed</option><option>Not filled</option></select></label>
+                  <label>Price chart link<input value={tradeForm.chartLink} onChange={(event) => setTradeForm((prev) => ({ ...prev, chartLink: event.target.value }))} /></label>
+                </div>
+                <label>Comments<textarea rows={3} value={tradeForm.comments} onChange={(event) => setTradeForm((prev) => ({ ...prev, comments: event.target.value }))} /></label>
+              </fieldset>
+
+              <div className="form-footer"><span /><button type="submit" disabled={busy}>Save Trade Log</button></div>
+            </form>
+          </section>
+
+          <section className="panel">
+            <h2>Trade Log Statistics</h2>
+            {tradeTrends ? (
+              <>
+                <div className="stats-grid">
+                  <div className="stat-card"><p>Total trades</p><h3>{tradeTrends.totalTrades}</h3></div>
+                  <div className="stat-card"><p>Net profit</p><h3>{tradeTrends.netProfit}</h3></div>
+                  <div className="stat-card"><p>Win rate</p><h3>{tradeTrends.winRate}%</h3></div>
+                  <div className="stat-card"><p>Average R/R</p><h3>{tradeTrends.averageRiskRewardRatio}</h3></div>
+                  <div className="stat-card"><p>Journal quality</p><h3>{tradeTrends.averageJournalScore}%</h3></div>
+                </div>
+
+                <h3 className="section-title">Weekly Statistics (Step 3)</h3>
+                <div className="history-table-wrapper">
+                  <table className="history-table">
+                    <thead><tr><th>Week start</th><th>Trades</th><th>Net profit</th><th>Win rate</th><th>Avg R/R</th></tr></thead>
+                    <tbody>
+                      {tradeTrends.weeklyStats.map((item) => (
+                        <tr key={item.weekStart}><td>{item.weekStart}</td><td>{item.trades}</td><td>{item.netProfit}</td><td>{item.winRate}%</td><td>{item.averageRiskRewardRatio}</td></tr>
+                      ))}
+                      {tradeTrends.weeklyStats.length === 0 && <tr><td colSpan={5}>No weekly data yet.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+
+                <h3 className="section-title">Recent Trade Logs</h3>
+                <div className="history-table-wrapper">
+                  <table className="history-table">
+                    <thead><tr><th>Date</th><th>Asset</th><th>Strategy</th><th>Profit</th><th>Feeling</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {tradeHistory.map((item) => (
+                        <tr key={item.id}><td>{item.tradeDate}</td><td>{item.tradingAsset}</td><td>{item.strategy}</td><td>{item.totalProfit ?? '-'}</td><td>{item.feelings ?? '-'}</td><td>{item.tradeStatus}</td></tr>
+                      ))}
+                      {tradeHistory.length === 0 && <tr><td colSpan={6}>No trade logs in this period.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="split-rollups">
+                  <article>
+                    <h3 className="section-title">By Strategy</h3>
+                    <div className="history-table-wrapper">
+                      <table className="history-table">
+                        <thead><tr><th>Strategy</th><th>Trades</th><th>Net</th><th>Win</th></tr></thead>
+                        <tbody>
+                          {tradeTrends.byStrategy.map((item) => (
+                            <tr key={item.name}><td>{item.name}</td><td>{item.trades}</td><td>{item.netProfit}</td><td>{item.winRate}%</td></tr>
+                          ))}
+                          {tradeTrends.byStrategy.length === 0 && <tr><td colSpan={4}>No strategy stats.</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </article>
+
+                  <article>
+                    <h3 className="section-title">By Asset</h3>
+                    <div className="history-table-wrapper">
+                      <table className="history-table">
+                        <thead><tr><th>Asset</th><th>Trades</th><th>Net</th><th>Win</th></tr></thead>
+                        <tbody>
+                          {tradeTrends.byAsset.map((item) => (
+                            <tr key={item.name}><td>{item.name}</td><td>{item.trades}</td><td>{item.netProfit}</td><td>{item.winRate}%</td></tr>
+                          ))}
+                          {tradeTrends.byAsset.length === 0 && <tr><td colSpan={4}>No asset stats.</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </article>
+                </div>
+              </>
+            ) : <p>Load data to view trade statistics.</p>}
+          </section>
+        </>
+      )}
 
       {error && <p className="error-banner">{error}</p>}
     </main>

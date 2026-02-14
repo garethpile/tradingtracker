@@ -30,21 +30,28 @@ body {
   padding: 2rem 1.25rem 3rem;
 }
 
-.hero {
+.header-shell {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 14px 30px #1f2d3f12;
+  margin-bottom: 1rem;
+}
+
+.header-top {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  align-items: flex-start;
-  margin-bottom: 1.25rem;
+  align-items: center;
+  margin-bottom: 0.8rem;
 }
 
-.eyebrow {
-  font-family: 'Sora', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent-alt);
-  font-size: 0.78rem;
-  margin: 0;
+.menu-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
 }
 
 h1,
@@ -55,12 +62,32 @@ legend {
 }
 
 h1 {
-  margin: 0.4rem 0;
+  margin: 0;
 }
 
 .subtitle {
   margin: 0;
   color: #334b67;
+}
+
+.tab {
+  background: #edf3ff;
+  color: #23405f;
+  border: 1px solid #d0dcf0;
+}
+
+.tab.active {
+  background: linear-gradient(120deg, #1d8e7f, #53ccb8);
+  color: #fff;
+  border-color: #1d8e7f;
+}
+
+.window-select {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
 }
 
 .hero-actions {
@@ -91,7 +118,7 @@ button.ghost {
 }
 
 .market-section {
-  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 .panel {
@@ -194,7 +221,7 @@ fieldset {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.65rem;
 }
 
@@ -265,6 +292,12 @@ fieldset {
   overflow: auto;
 }
 
+.split-rollups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
 .history-table {
   width: 100%;
   border-collapse: collapse;
@@ -288,8 +321,9 @@ fieldset {
 }
 
 @media (max-width: 980px) {
-  .hero {
+  .header-top {
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .content-grid {
@@ -311,5 +345,13 @@ fieldset {
 
   .market-structure-row {
     grid-template-columns: 1fr;
+  }
+
+  .split-rollups {
+    grid-template-columns: 1fr;
+  }
+
+  .window-select {
+    margin-left: 0;
   }
 }

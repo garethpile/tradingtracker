@@ -81,6 +81,8 @@ const checks = api.root.addResource('checks');
 const checksTrends = checks.addResource('trends');
 const analysis = api.root.addResource('analysis');
 const analysisTrends = analysis.addResource('trends');
+const trades = api.root.addResource('trades');
+const tradesTrends = trades.addResource('trends');
 const integration = new LambdaIntegration(backend.tradingApi.resources.lambda);
 
 checks.addMethod('POST', integration, {
@@ -109,6 +111,21 @@ analysis.addMethod('GET', integration, {
 });
 
 analysisTrends.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+trades.addMethod('POST', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+trades.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+tradesTrends.addMethod('GET', integration, {
   authorizationType: AuthorizationType.COGNITO,
   authorizer,
 });
