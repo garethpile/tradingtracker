@@ -84,17 +84,22 @@ type MarketAnalysisPayload = {
 
 type TradeLogPayload = {
   tradeDate: string;
+  tradeTime?: string;
   sessionName?: string;
   tradingAsset: string;
   strategy: string;
+  confluences?: string[];
+  entryPrice?: number;
   riskRewardRatio?: number;
-  stopLossPips?: number;
-  takeProfitPips?: number;
+  stopLossPrice?: number;
+  takeProfitPrice?: number;
+  estimatedLoss?: number;
+  estimatedProfit?: number;
+  exitPrice?: number;
   totalProfit?: number;
   feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments?: string;
   chartLink?: string;
-  tradeStatus: 'open' | 'closed';
 };
 
 const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
@@ -188,14 +193,20 @@ const scoreAnalysis = (item: MarketAnalysisPayload): number => {
 const scoreTradeLog = (item: TradeLogPayload): number => {
   const step1 = [
     item.tradeDate,
+    item.tradeTime,
     item.tradingAsset,
     item.strategy,
+    item.confluences && item.confluences.length > 0 ? item.confluences.join(',') : undefined,
+    item.entryPrice,
     item.riskRewardRatio,
-    item.stopLossPips,
-    item.takeProfitPips,
+    item.stopLossPrice,
+    item.takeProfitPrice,
+    item.estimatedLoss,
+    item.estimatedProfit,
   ];
 
   const step2 = [
+    item.exitPrice,
     item.totalProfit,
     item.feelings,
     item.comments,
@@ -252,6 +263,34 @@ const toNumber = (value: unknown): number | null => {
   }
 
   return null;
+};
+
+const tradeDirectionIsBuy = (entryPrice?: number, takeProfitPrice?: number): boolean => {
+  if (entryPrice === undefined || takeProfitPrice === undefined) {
+    return true;
+  }
+
+  return takeProfitPrice >= entryPrice;
+};
+
+const calculateTradeDerivedValues = (payload: TradeLogPayload) => {
+  const entry = payload.entryPrice;
+  const stop = payload.stopLossPrice;
+  const take = payload.takeProfitPrice;
+  const exit = payload.exitPrice;
+
+  const estimatedLoss = entry !== undefined && stop !== undefined
+    ? Number(Math.abs(entry - stop).toFixed(2))
+    : undefined;
+  const estimatedProfit = entry !== undefined && take !== undefined
+    ? Number(Math.abs(take - entry).toFixed(2))
+    : undefined;
+
+  const tradeProfit = entry !== undefined && exit !== undefined
+    ? Number((tradeDirectionIsBuy(entry, take) ? exit - entry : entry - exit).toFixed(2))
+    : payload.totalProfit;
+
+  return { estimatedLoss, estimatedProfit, tradeProfit };
 };
 
 const buildTrendReport = (items: Array<Record<string, unknown>>) => {
@@ -423,7 +462,7 @@ const buildTradeTrendReport = (items: Array<Record<string, unknown>>) => {
 
     scoreTotal += journalScore;
 
-    const isClosed = String(item.tradeStatus ?? 'open') === 'closed';
+    const isClosed = toNumber(item.exitPrice) !== null || profit !== null;
     const isWin = isClosed && profit !== null && profit > 0;
 
     if (profit !== null) {
@@ -599,6 +638,7 @@ export const handler = async (
     const payload = JSON.parse(event.body) as TradeLogPayload;
     const createdAt = new Date().toISOString();
     const id = crypto.randomUUID();
+    const derived = calculateTradeDerivedValues(payload);
 
     const item = {
       userId: userSub,
@@ -606,6 +646,9 @@ export const handler = async (
       id,
       itemType: 'TRADE_LOG',
       ...payload,
+      estimatedLoss: derived.estimatedLoss ?? payload.estimatedLoss,
+      estimatedProfit: derived.estimatedProfit ?? payload.estimatedProfit,
+      totalProfit: derived.tradeProfit,
       journalScore: scoreTradeLog(payload),
     };
 

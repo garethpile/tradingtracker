@@ -105,34 +105,41 @@ type AnalysisTrendResponse = {
 
 type TradeLogFormState = {
   tradeDate: string;
+  tradeTime: string;
   sessionName: string;
   tradingAsset: string;
   strategy: string;
+  confluences: string[];
+  entryPrice: string;
   riskRewardRatio: string;
-  stopLossPips: string;
-  takeProfitPips: string;
-  totalProfit: string;
+  stopLossPrice: string;
+  takeProfitPrice: string;
+  exitPrice: string;
   feelings: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments: string;
   chartLink: string;
-  tradeStatus: 'open' | 'closed';
 };
 
 type TradeLogItem = {
   id: string;
   createdAt: string;
   tradeDate: string;
+  tradeTime?: string;
   sessionName?: string;
   tradingAsset: string;
   strategy: string;
+  confluences?: string[];
+  entryPrice?: number;
   riskRewardRatio?: number;
-  stopLossPips?: number;
-  takeProfitPips?: number;
+  stopLossPrice?: number;
+  takeProfitPrice?: number;
+  estimatedLoss?: number;
+  estimatedProfit?: number;
+  exitPrice?: number;
   totalProfit?: number;
   feelings?: string;
   comments?: string;
   chartLink?: string;
-  tradeStatus: 'open' | 'closed';
   journalScore: number;
 };
 
@@ -255,17 +262,19 @@ const defaultAnalysisForm = (): AnalysisFormState => ({
 
 const defaultTradeForm = (): TradeLogFormState => ({
   tradeDate: new Date().toISOString().slice(0, 10),
+  tradeTime: new Date().toTimeString().slice(0, 5),
   sessionName: 'London Open',
   tradingAsset: 'XAUUSD',
   strategy: '',
+  confluences: [''],
+  entryPrice: '',
   riskRewardRatio: '',
-  stopLossPips: '',
-  takeProfitPips: '',
-  totalProfit: '',
+  stopLossPrice: '',
+  takeProfitPrice: '',
+  exitPrice: '',
   feelings: 'Not filled',
   comments: '',
   chartLink: '',
-  tradeStatus: 'open',
 });
 
 const outputConfig = {
@@ -331,6 +340,32 @@ const toNumberOrUndefined = (value: string): number | undefined => {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const computeEstimatedLoss = (entry?: number, stopLoss?: number): number | undefined => {
+  if (entry === undefined || stopLoss === undefined) {
+    return undefined;
+  }
+
+  return Number(Math.abs(entry - stopLoss).toFixed(2));
+};
+
+const computeEstimatedProfit = (entry?: number, takeProfit?: number): number | undefined => {
+  if (entry === undefined || takeProfit === undefined) {
+    return undefined;
+  }
+
+  return Number(Math.abs(takeProfit - entry).toFixed(2));
+};
+
+const computeTradeProfit = (entry?: number, exit?: number, takeProfit?: number): number | undefined => {
+  if (entry === undefined || exit === undefined) {
+    return undefined;
+  }
+
+  const isBuy = takeProfit === undefined ? true : takeProfit >= entry;
+  const raw = isBuy ? exit - entry : entry - exit;
+  return Number(raw.toFixed(2));
 };
 
 const buildAuthHeader = async () => {
@@ -399,6 +434,14 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     const fields = checklistLabels.map((item) => checklistForm[item.key]);
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
   }, [checklistForm]);
+
+  const entryPriceValue = toNumberOrUndefined(tradeForm.entryPrice);
+  const stopLossPriceValue = toNumberOrUndefined(tradeForm.stopLossPrice);
+  const takeProfitPriceValue = toNumberOrUndefined(tradeForm.takeProfitPrice);
+  const exitPriceValue = toNumberOrUndefined(tradeForm.exitPrice);
+  const estimatedLossValue = computeEstimatedLoss(entryPriceValue, stopLossPriceValue);
+  const estimatedProfitValue = computeEstimatedProfit(entryPriceValue, takeProfitPriceValue);
+  const tradeProfitValue = computeTradeProfit(entryPriceValue, exitPriceValue, takeProfitPriceValue);
 
   useEffect(() => {
     void refresh(days);
@@ -485,10 +528,15 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         method: 'POST',
         body: JSON.stringify({
           ...tradeForm,
+          confluences: tradeForm.confluences.map((item) => item.trim()).filter((item) => item.length > 0),
+          entryPrice: entryPriceValue,
           riskRewardRatio: toNumberOrUndefined(tradeForm.riskRewardRatio),
-          stopLossPips: toNumberOrUndefined(tradeForm.stopLossPips),
-          takeProfitPips: toNumberOrUndefined(tradeForm.takeProfitPips),
-          totalProfit: toNumberOrUndefined(tradeForm.totalProfit),
+          stopLossPrice: stopLossPriceValue,
+          takeProfitPrice: takeProfitPriceValue,
+          estimatedLoss: estimatedLossValue,
+          estimatedProfit: estimatedProfitValue,
+          exitPrice: exitPriceValue,
+          totalProfit: tradeProfitValue,
         }),
       });
       setTradeForm(defaultTradeForm());
@@ -762,29 +810,84 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         <>
           <section className="panel">
             <h2>Trading Journal</h2>
-            <p className="subtitle">Step 1 after opening: date, asset, strategy, R/R, SL, TP. Step 2 after closing: total profit, feelings, comments, and chart link. Step 3: weekly net profit, win rate, and average R/R are calculated automatically.</p>
+            <p className="subtitle">Step 1 after opening: date, time, asset, strategy, confluences, entry, SL, TP, and estimated outcomes. Step 2 after closing: exit price, trade profit (auto), feelings, chart link, and comments. Step 3: weekly net profit, win rate, and average R/R are calculated automatically.</p>
             <form className="market-form" onSubmit={saveTradeLog}>
               <fieldset>
                 <legend>Step 1: Open Position Details</legend>
                 <div className="grid-3">
                   <label>Date<input type="date" value={tradeForm.tradeDate} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeDate: event.target.value }))} required /></label>
+                  <label>Time<input type="time" value={tradeForm.tradeTime} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeTime: event.target.value }))} required /></label>
                   <label>Session<select value={tradeForm.sessionName} onChange={(event) => setTradeForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
                   <label>Trading asset<input value={tradeForm.tradingAsset} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradingAsset: event.target.value }))} required /></label>
                   <label>Strategy<input value={tradeForm.strategy} onChange={(event) => setTradeForm((prev) => ({ ...prev, strategy: event.target.value }))} required /></label>
                   <label>Reward from R/R ratio (1:X)<input type="number" step="0.01" value={tradeForm.riskRewardRatio} onChange={(event) => setTradeForm((prev) => ({ ...prev, riskRewardRatio: event.target.value }))} /></label>
-                  <label>Stop loss (pips)<input type="number" step="0.01" value={tradeForm.stopLossPips} onChange={(event) => setTradeForm((prev) => ({ ...prev, stopLossPips: event.target.value }))} /></label>
-                  <label>Take profit (pips)<input type="number" step="0.01" value={tradeForm.takeProfitPips} onChange={(event) => setTradeForm((prev) => ({ ...prev, takeProfitPips: event.target.value }))} /></label>
-                  <label>Trade status<select value={tradeForm.tradeStatus} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeStatus: event.target.value as TradeLogFormState['tradeStatus'] }))}><option value="open">Open</option><option value="closed">Closed</option></select></label>
+                </div>
+
+                <div className="grid-4">
+                  <label>Entry price<input type="number" step="0.01" value={tradeForm.entryPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, entryPrice: event.target.value }))} /></label>
+                  <label>Stop loss price<input type="number" step="0.01" value={tradeForm.stopLossPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, stopLossPrice: event.target.value }))} /></label>
+                  <label>Take profit price<input type="number" step="0.01" value={tradeForm.takeProfitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, takeProfitPrice: event.target.value }))} /></label>
+                </div>
+
+                <div className="grid-3">
+                  <label>Estimated loss (auto)<input readOnly value={estimatedLossValue ?? ''} /></label>
+                  <label>Estimated profit (auto)<input readOnly value={estimatedProfitValue ?? ''} /></label>
+                </div>
+
+                <label>Confluences</label>
+                <div className="confluences-list">
+                  {tradeForm.confluences.map((value, index) => (
+                    <div key={`confluence-${index}`} className="confluence-row">
+                      <input
+                        value={value}
+                        placeholder={`Confluence ${index + 1}`}
+                        onChange={(event) =>
+                          setTradeForm((prev) => ({
+                            ...prev,
+                            confluences: prev.confluences.map((entry, entryIndex) => (
+                              entryIndex === index ? event.target.value : entry
+                            )),
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="ghost"
+                        disabled={tradeForm.confluences.length <= 1}
+                        onClick={() =>
+                          setTradeForm((prev) => ({
+                            ...prev,
+                            confluences: prev.confluences.filter((_, entryIndex) => entryIndex !== index),
+                          }))
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="ghost add-confluence"
+                    onClick={() =>
+                      setTradeForm((prev) => ({
+                        ...prev,
+                        confluences: [...prev.confluences, ''],
+                      }))
+                    }
+                  >
+                    Add confluence
+                  </button>
                 </div>
               </fieldset>
 
               <fieldset>
                 <legend>Step 2: Close Position Details</legend>
                 <div className="grid-3">
-                  <label>Total profit<input type="number" step="0.01" value={tradeForm.totalProfit} onChange={(event) => setTradeForm((prev) => ({ ...prev, totalProfit: event.target.value }))} /></label>
+                  <label>Exit price<input type="number" step="0.01" value={tradeForm.exitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, exitPrice: event.target.value }))} /></label>
+                  <label>Trade profit (auto)<input readOnly value={tradeProfitValue ?? ''} /></label>
                   <label>Feelings<select value={tradeForm.feelings} onChange={(event) => setTradeForm((prev) => ({ ...prev, feelings: event.target.value as TradeLogFormState['feelings'] }))}><option>Satisfied</option><option>Neutral</option><option>Disappointed</option><option>Not filled</option></select></label>
-                  <label>Price chart link<input value={tradeForm.chartLink} onChange={(event) => setTradeForm((prev) => ({ ...prev, chartLink: event.target.value }))} /></label>
                 </div>
+                <label>Price chart link<input value={tradeForm.chartLink} onChange={(event) => setTradeForm((prev) => ({ ...prev, chartLink: event.target.value }))} /></label>
                 <label>Comments<textarea rows={3} value={tradeForm.comments} onChange={(event) => setTradeForm((prev) => ({ ...prev, comments: event.target.value }))} /></label>
               </fieldset>
 
@@ -820,12 +923,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 <h3 className="section-title">Recent Trade Logs</h3>
                 <div className="history-table-wrapper">
                   <table className="history-table">
-                    <thead><tr><th>Date</th><th>Asset</th><th>Strategy</th><th>Profit</th><th>Feeling</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Time</th><th>Asset</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Feeling</th></tr></thead>
                     <tbody>
                       {tradeHistory.map((item) => (
-                        <tr key={item.id}><td>{item.tradeDate}</td><td>{item.tradingAsset}</td><td>{item.strategy}</td><td>{item.totalProfit ?? '-'}</td><td>{item.feelings ?? '-'}</td><td>{item.tradeStatus}</td></tr>
+                        <tr key={item.id}><td>{item.tradeDate}</td><td>{item.tradeTime ?? '-'}</td><td>{item.tradingAsset}</td><td>{item.entryPrice ?? '-'}</td><td>{item.exitPrice ?? '-'}</td><td>{item.totalProfit ?? '-'}</td><td>{item.feelings ?? '-'}</td></tr>
                       ))}
-                      {tradeHistory.length === 0 && <tr><td colSpan={6}>No trade logs in this period.</td></tr>}
+                      {tradeHistory.length === 0 && <tr><td colSpan={7}>No trade logs in this period.</td></tr>}
                     </tbody>
                   </table>
                 </div>

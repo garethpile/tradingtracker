@@ -146,6 +146,12 @@ button.ghost {
   gap: 0.7rem;
 }
 
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.7rem;
+}
+
 .analysis-rows {
   display: grid;
   gap: 0.5rem;
@@ -298,6 +304,21 @@ fieldset {
   gap: 1rem;
 }
 
+.confluences-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.confluence-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.add-confluence {
+  justify-self: start;
+}
+
 .history-table {
   width: 100%;
   border-collapse: collapse;
@@ -335,6 +356,7 @@ fieldset {
   }
 
   .grid-3,
+  .grid-4,
   .market-structure-grid {
     grid-template-columns: 1fr;
   }
