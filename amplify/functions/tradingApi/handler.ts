@@ -567,16 +567,17 @@ const buildTradeTrendReport = (items: Array<Record<string, unknown>>) => {
 export const handler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
-  if (!tableName) {
-    return json(500, { message: 'Missing table configuration' });
-  }
+  try {
+    if (!tableName) {
+      return json(500, { message: 'Missing table configuration' });
+    }
 
-  const userSub = getUserSub(event);
-  if (!userSub) {
-    return json(401, { message: 'Unauthorized' });
-  }
+    const userSub = getUserSub(event);
+    if (!userSub) {
+      return json(401, { message: 'Unauthorized' });
+    }
 
-  const routeKey = `${event.httpMethod} ${event.path}`;
+    const routeKey = `${event.httpMethod} ${event.path}`;
 
   if (routeKey.endsWith('POST /checks')) {
     if (!event.body) {
@@ -735,39 +736,41 @@ export const handler = async (
     });
   }
 
-  if (routeKey.endsWith('DELETE /trades')) {
-    const createdAt = event.queryStringParameters?.createdAt;
-    const id = event.queryStringParameters?.id;
+    if (routeKey.endsWith('DELETE /trades')) {
+      const createdAt = event.queryStringParameters?.createdAt;
+      const id = event.queryStringParameters?.id;
 
-    if (!createdAt || !id) {
-      return json(400, { message: 'Missing createdAt or id query parameter' });
-    }
-
-    try {
-      await client.send(
-        new DeleteCommand({
-          TableName: tableName,
-          Key: {
-            userId: userSub,
-            createdAt,
-          },
-          ConditionExpression: 'id = :id AND itemType = :tradeItemType',
-          ExpressionAttributeValues: {
-            ':id': id,
-            ':tradeItemType': 'TRADE_LOG',
-          },
-        }),
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Delete failed';
-      if (message.includes('ConditionalCheckFailedException')) {
-        return json(404, { message: 'Trade log not found' });
+      if (!createdAt || !id) {
+        return json(400, { message: 'Missing createdAt or id query parameter' });
       }
-      throw error;
-    }
 
-    return json(200, { deleted: true });
-  }
+      try {
+        await client.send(
+          new DeleteCommand({
+            TableName: tableName,
+            Key: {
+              userId: userSub,
+              createdAt,
+            },
+            ConditionExpression: 'id = :id AND itemType = :tradeItemType',
+            ExpressionAttributeValues: {
+              ':id': id,
+              ':tradeItemType': 'TRADE_LOG',
+            },
+          }),
+        );
+      } catch (error) {
+        const maybeError = error as { name?: string; message?: string };
+        const errorName = maybeError.name ?? '';
+        const errorMessage = maybeError.message ?? '';
+        if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
+          return json(404, { message: 'Trade log not found' });
+        }
+        return json(500, { message: 'Failed to delete trade log', detail: errorMessage || 'Unknown error' });
+      }
+
+      return json(200, { deleted: true });
+    }
 
   if (routeKey.endsWith('GET /checks/trends')) {
     const days = parseQueryDays(event.queryStringParameters?.days);
@@ -838,5 +841,9 @@ export const handler = async (
     });
   }
 
-  return json(404, { message: 'Route not found' });
+    return json(404, { message: 'Route not found' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown server error';
+    return json(500, { message: 'Request failed', detail: message });
+  }
 };
