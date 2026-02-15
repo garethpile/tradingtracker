@@ -316,6 +316,53 @@ const getWeekEndingSunday = (value: string): string => {
 const normalizeConfluenceName = (value: string): string =>
   value.trim().replace(/\s+/g, ' ').toLowerCase();
 
+const getOrSeedBaseConfluenceItems = async (): Promise<Array<Record<string, unknown>>> => {
+  const baseQuery = async () => client.send(
+    new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'itemType = :baseConfluenceItemType',
+      ExpressionAttributeValues: {
+        ':userId': baseConfluenceUserId,
+        ':startIso': '0000-01-01T00:00:00.000Z',
+        ':baseConfluenceItemType': 'BASE_CONFLUENCE',
+      },
+      ScanIndexForward: false,
+    }),
+  );
+
+  const firstResult = await baseQuery();
+  if ((firstResult.Items ?? []).length > 0) {
+    return firstResult.Items ?? [];
+  }
+
+  await Promise.all(
+    baseConfluenceFallback.map(async (name, index) => {
+      const createdAt = `BASE#${String(index + 1).padStart(3, '0')}`;
+      try {
+        await client.send(
+          new PutCommand({
+            TableName: tableName,
+            Item: {
+              userId: baseConfluenceUserId,
+              createdAt,
+              id: `base-${index + 1}`,
+              itemType: 'BASE_CONFLUENCE',
+              name,
+            },
+            ConditionExpression: 'attribute_not_exists(userId) AND attribute_not_exists(createdAt)',
+          }),
+        );
+      } catch {
+        // Ignore seed race collisions.
+      }
+    }),
+  );
+
+  const secondResult = await baseQuery();
+  return secondResult.Items ?? [];
+};
+
 const toNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -728,20 +775,8 @@ export const handler = async (
   }
 
   if (routeKey.endsWith('GET /confluences') || routeKey.endsWith('GET /confluences/base')) {
-    const [baseResult, customResult] = await Promise.all([
-      client.send(
-        new QueryCommand({
-          TableName: tableName,
-          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-          FilterExpression: 'itemType = :baseConfluenceItemType',
-          ExpressionAttributeValues: {
-            ':userId': baseConfluenceUserId,
-            ':startIso': '0000-01-01T00:00:00.000Z',
-            ':baseConfluenceItemType': 'BASE_CONFLUENCE',
-          },
-          ScanIndexForward: false,
-        }),
-      ),
+    const [baseItems, customResult] = await Promise.all([
+      getOrSeedBaseConfluenceItems(),
       client.send(
         new QueryCommand({
           TableName: tableName,
@@ -757,7 +792,7 @@ export const handler = async (
       ),
     ]);
 
-    const baseFromDb = (baseResult.Items ?? [])
+    const baseFromDb = baseItems
       .map((item) => ({
         id: String(item.id ?? ''),
         createdAt: String(item.createdAt ?? ''),
@@ -766,14 +801,7 @@ export const handler = async (
       }))
       .filter((item) => item.id.length > 0 && item.createdAt.length > 0 && item.name.length > 0);
 
-    const effectiveBase = baseFromDb.length > 0
-      ? baseFromDb
-      : baseConfluenceFallback.map((name, index) => ({
-        id: `fallback-${index + 1}`,
-        createdAt: '',
-        name,
-        isBase: true,
-      }));
+    const effectiveBase = baseFromDb;
 
     const custom = (customResult.Items ?? [])
       .map((item) => ({
@@ -820,19 +848,8 @@ export const handler = async (
       return json(400, { message: 'Confluence name must be between 2 and 180 characters' });
     }
 
-    const [baseResult, customResult] = await Promise.all([
-      client.send(
-        new QueryCommand({
-          TableName: tableName,
-          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-          FilterExpression: 'itemType = :baseConfluenceItemType',
-          ExpressionAttributeValues: {
-            ':userId': baseConfluenceUserId,
-            ':startIso': '0000-01-01T00:00:00.000Z',
-            ':baseConfluenceItemType': 'BASE_CONFLUENCE',
-          },
-        }),
-      ),
+    const [baseItems, customResult] = await Promise.all([
+      getOrSeedBaseConfluenceItems(),
       client.send(
         new QueryCommand({
           TableName: tableName,
@@ -849,14 +866,12 @@ export const handler = async (
 
     const normalizedRequested = normalizeConfluenceName(name);
     const baseSetFromDb = new Set(
-      (baseResult.Items ?? [])
+      baseItems
         .map((item) => String(item.name ?? ''))
         .map((item) => normalizeConfluenceName(item))
         .filter((item) => item.length > 0),
     );
-    const normalizedBase = baseSetFromDb.size > 0
-      ? baseSetFromDb
-      : new Set(baseConfluenceFallback.map((item) => normalizeConfluenceName(item)));
+    const normalizedBase = baseSetFromDb;
     const customSet = new Set(
       (customResult.Items ?? [])
         .map((item) => String(item.name ?? ''))
@@ -903,28 +918,16 @@ export const handler = async (
       return json(400, { message: 'Confluence name must be between 2 and 180 characters' });
     }
 
-    const baseResult = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'itemType = :baseConfluenceItemType',
-        ExpressionAttributeValues: {
-          ':userId': baseConfluenceUserId,
-          ':startIso': '0000-01-01T00:00:00.000Z',
-          ':baseConfluenceItemType': 'BASE_CONFLUENCE',
-        },
-      }),
-    );
+    const baseItems = await getOrSeedBaseConfluenceItems();
 
     const normalizedRequested = normalizeConfluenceName(name);
     const existingBase = new Set(
-      (baseResult.Items ?? [])
+      baseItems
         .map((item) => String(item.name ?? ''))
         .map((item) => normalizeConfluenceName(item))
         .filter((item) => item.length > 0),
     );
-    const fallbackSet = new Set(baseConfluenceFallback.map((item) => normalizeConfluenceName(item)));
-    const effectiveBase = existingBase.size > 0 ? existingBase : fallbackSet;
+    const effectiveBase = existingBase;
 
     if (effectiveBase.has(normalizedRequested)) {
       return json(409, { message: 'Base confluence already exists' });
