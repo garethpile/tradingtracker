@@ -5,7 +5,7 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 import outputs from '../amplify_outputs.json';
 import './App.css';
 
-type MenuTab = 'checklist' | 'analysis' | 'trades';
+type MenuTab = 'checklist' | 'analysis' | 'trades' | 'confluences';
 
 type ChecklistItem = {
   id: string;
@@ -167,6 +167,19 @@ type TradeTrendResponse = {
   }>;
   byStrategy: TradeRollup[];
   byAsset: TradeRollup[];
+};
+
+type ConfluenceItem = {
+  id: string;
+  createdAt: string;
+  name: string;
+  isBase: boolean;
+};
+
+type ConfluenceResponse = {
+  items: ConfluenceItem[];
+  base: ConfluenceItem[];
+  custom: ConfluenceItem[];
 };
 
 type FormState = {
@@ -333,6 +346,35 @@ const checklistLabels: Array<{ key: BooleanFormKey; label: string; kind: 'questi
   },
 ];
 
+const defaultConfluenceOptions = [
+  'Higher timeframe bias alignmnet',
+  'Break & retest',
+  'Rejection at high',
+  'Moving average - Bullish - Price above 21 & 50 SMA',
+  'Moving average - Bullish - 21 crossing above 50',
+  'RSI - Above 55',
+  'RSI - Below 45',
+  'MACD - Histogram expanding in dorection of trade',
+];
+
+const getIsAdminFromSession = async (): Promise<boolean> => {
+  const session = await fetchAuthSession();
+  const groupsClaim = session.tokens?.idToken?.payload?.['cognito:groups'];
+  if (!groupsClaim) {
+    return false;
+  }
+
+  if (Array.isArray(groupsClaim)) {
+    return groupsClaim.some((entry) => String(entry) === 'Administrators');
+  }
+
+  if (typeof groupsClaim === 'string') {
+    return groupsClaim.split(',').map((entry) => entry.trim()).includes('Administrators');
+  }
+
+  return false;
+};
+
 const toNumberOrUndefined = (value: string): number | undefined => {
   if (value.trim().length === 0) {
     return undefined;
@@ -421,6 +463,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [checklistHistory, setChecklistHistory] = useState<ChecklistItem[]>([]);
   const [analysisHistory, setAnalysisHistory] = useState<MarketAnalysisItem[]>([]);
   const [tradeHistory, setTradeHistory] = useState<TradeLogItem[]>([]);
+  const [confluenceItems, setConfluenceItems] = useState<ConfluenceItem[]>([]);
+  const [baseConfluences, setBaseConfluences] = useState<ConfluenceItem[]>([]);
+  const [customConfluences, setCustomConfluences] = useState<ConfluenceItem[]>([]);
+  const [newConfluence, setNewConfluence] = useState('');
+  const [newBaseConfluence, setNewBaseConfluence] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [checklistTrends, setChecklistTrends] = useState<TrendResponse | null>(null);
   const [analysisTrends, setAnalysisTrends] = useState<AnalysisTrendResponse | null>(null);
@@ -437,6 +485,27 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     return Math.round((fields.filter(Boolean).length / fields.length) * 100);
   }, [checklistForm]);
 
+  const confluenceSuggestions = useMemo(() => {
+    const normalized = new Set<string>();
+    const names = [
+      ...defaultConfluenceOptions,
+      ...confluenceItems.map((item) => item.name),
+    ];
+
+    return names
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0)
+      .filter((name) => {
+        const key = name.toLowerCase();
+        if (normalized.has(key)) {
+          return false;
+        }
+        normalized.add(key);
+        return true;
+      })
+      .sort((a, b) => a.localeCompare(b));
+  }, [confluenceItems]);
+
   const entryPriceValue = toNumberOrUndefined(tradeForm.entryPrice);
   const stopLossPriceValue = toNumberOrUndefined(tradeForm.stopLossPrice);
   const takeProfitPriceValue = toNumberOrUndefined(tradeForm.takeProfitPrice);
@@ -446,18 +515,26 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const tradeProfitValue = computeTradeProfit(entryPriceValue, exitPriceValue, takeProfitPriceValue);
 
   useEffect(() => {
+    void (async () => {
+      try {
+        setIsAdmin(await getIsAdminFromSession());
+      } catch {
+        setIsAdmin(false);
+      }
+    })();
     void refresh(days);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async (windowDays = days) => {
-    const [checksRes, checksTrendRes, analysisRes, analysisTrendRes, tradesRes, tradesTrendRes] = await Promise.all([
+    const [checksRes, checksTrendRes, analysisRes, analysisTrendRes, tradesRes, tradesTrendRes, confluencesRes] = await Promise.all([
       apiCall<{ items: ChecklistItem[] }>(`checks?days=${windowDays}`),
       apiCall<TrendResponse>(`checks/trends?days=${windowDays}`),
       apiCall<{ items: MarketAnalysisItem[] }>(`analysis?days=${windowDays}`),
       apiCall<AnalysisTrendResponse>(`analysis/trends?days=${windowDays}`),
       apiCall<{ items: TradeLogItem[] }>(`trades?days=${windowDays}`),
       apiCall<TradeTrendResponse>(`trades/trends?days=${windowDays}`),
+      apiCall<ConfluenceResponse>('confluences'),
     ]);
 
     setChecklistHistory(checksRes.items);
@@ -466,6 +543,9 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     setAnalysisTrends(analysisTrendRes);
     setTradeHistory(tradesRes.items);
     setTradeTrends(tradesTrendRes);
+    setConfluenceItems(confluencesRes.items);
+    setBaseConfluences(confluencesRes.base);
+    setCustomConfluences(confluencesRes.custom);
   };
 
   const refresh = async (nextDays: number) => {
@@ -570,6 +650,118 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     }
   };
 
+  const saveConfluence = async (event: FormEvent) => {
+    event.preventDefault();
+    const name = newConfluence.trim();
+    if (name.length < 2) {
+      setError('Confluence must be at least 2 characters');
+      return;
+    }
+
+    const alreadyExists = confluenceSuggestions.some((item) => item.toLowerCase() === name.toLowerCase());
+    if (alreadyExists) {
+      setError('Confluence already exists');
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await apiCall<ConfluenceItem>('confluences', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      setNewConfluence('');
+      await loadData();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save confluence');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteConfluence = async (item: ConfluenceItem) => {
+    if (item.isBase) {
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this custom confluence?');
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await apiCall<{ deleted: boolean }>(`confluences?createdAt=${encodeURIComponent(item.createdAt)}&id=${encodeURIComponent(item.id)}`, {
+        method: 'DELETE',
+      });
+      await loadData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete confluence');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveBaseConfluence = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!isAdmin) {
+      return;
+    }
+
+    const name = newBaseConfluence.trim();
+    if (name.length < 2) {
+      setError('Base confluence must be at least 2 characters');
+      return;
+    }
+
+    const alreadyExists = confluenceSuggestions.some((item) => item.toLowerCase() === name.toLowerCase());
+    if (alreadyExists) {
+      setError('Confluence already exists');
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await apiCall<ConfluenceItem>('confluences/base', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
+      setNewBaseConfluence('');
+      await loadData();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save base confluence');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteBaseConfluence = async (item: ConfluenceItem) => {
+    if (!isAdmin || !item.isBase || !item.createdAt) {
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this base confluence for all users?');
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await apiCall<{ deleted: boolean }>(`confluences/base?createdAt=${encodeURIComponent(item.createdAt)}&id=${encodeURIComponent(item.id)}`, {
+        method: 'DELETE',
+      });
+      await loadData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete base confluence');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <main className="page">
       <header className="header-shell">
@@ -585,6 +777,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
           <button className={activeTab === 'checklist' ? 'tab active' : 'tab'} onClick={() => setActiveTab('checklist')}>Checklist</button>
           <button className={activeTab === 'analysis' ? 'tab active' : 'tab'} onClick={() => setActiveTab('analysis')}>Analysis</button>
           <button className={activeTab === 'trades' ? 'tab active' : 'tab'} onClick={() => setActiveTab('trades')}>Trade Logs</button>
+          <button className={activeTab === 'confluences' ? 'tab active' : 'tab'} onClick={() => setActiveTab('confluences')}>Confluences</button>
           <label className="window-select">
             Window
             <select value={days} onChange={(event) => void refresh(Number(event.target.value))} disabled={busy}>
@@ -870,6 +1063,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                       <input
                         value={value}
                         placeholder={`Confluence ${index + 1}`}
+                        list="trade-confluence-options"
                         onChange={(event) =>
                           setTradeForm((prev) => ({
                             ...prev,
@@ -907,6 +1101,11 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                     Add confluence
                   </button>
                 </div>
+                <datalist id="trade-confluence-options">
+                  {confluenceSuggestions.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
               </fieldset>
 
               <fieldset>
@@ -1027,6 +1226,91 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             )}
           </section>
         </>
+      )}
+
+      {activeTab === 'confluences' && (
+        <section className="panel">
+          <h2>Manage Confluences</h2>
+          <p className="subtitle">
+            Base confluences are available to all users. Add your own custom confluences for personal use.
+          </p>
+
+          <article className="confluence-manage-card">
+            <form className="confluence-form" onSubmit={saveConfluence}>
+              <label>
+                Add custom confluence
+                <input
+                  value={newConfluence}
+                  onChange={(event) => setNewConfluence(event.target.value)}
+                  placeholder="Type a confluence and save"
+                  required
+                />
+              </label>
+              <button type="submit" disabled={busy}>Save confluence</button>
+            </form>
+
+            <div className="confluence-grid">
+              {customConfluences.map((item) => (
+                <div key={`${item.id}-${item.name}`} className="confluence-pill">
+                  <span>{item.name}</span>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    title="Delete custom confluence"
+                    aria-label="Delete custom confluence"
+                    onClick={() => void deleteConfluence(item)}
+                  >
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                      <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z" fill="currentColor" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+              {customConfluences.length === 0 && <p>No custom confluences yet.</p>}
+            </div>
+          </article>
+
+          {isAdmin && (
+            <article className="confluence-manage-card">
+              <h3>Manage Base Confluences</h3>
+              <form className="confluence-form" onSubmit={saveBaseConfluence}>
+                <label>
+                  Add base confluence
+                  <input
+                    value={newBaseConfluence}
+                    onChange={(event) => setNewBaseConfluence(event.target.value)}
+                    placeholder="Type base confluence and save"
+                    required
+                  />
+                </label>
+                <button type="submit" disabled={busy}>Save base confluence</button>
+              </form>
+
+              <div className="confluence-grid">
+                {baseConfluences.map((item) => (
+                  <div key={`${item.id}-${item.name}`} className="confluence-pill">
+                    <span>{item.name}</span>
+                    {item.createdAt ? (
+                      <button
+                        type="button"
+                        className="icon-button"
+                        title="Delete base confluence"
+                        aria-label="Delete base confluence"
+                        onClick={() => void deleteBaseConfluence(item)}
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                          <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z" fill="currentColor" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <small>Default</small>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </article>
+          )}
+        </section>
       )}
 
       {error && <p className="error-banner">{error}</p>}

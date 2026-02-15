@@ -10,11 +10,13 @@ import {
 import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { auth } from './auth/resource';
+import { postConfirmationAddTrader } from './functions/postConfirmationAddTrader/resource';
 import { tradingApi } from './functions/tradingApi/resource';
 
 const backend = defineBackend({
   auth,
   tradingApi,
+  postConfirmationAddTrader,
 });
 
 const apiStack = backend.tradingApi.stack;
@@ -71,10 +73,14 @@ backend.tradingApi.resources.lambda.addEnvironment(
   'TRADING_TRACKER_TABLE_NAME',
   checklistTable.tableName,
 );
+backend.postConfirmationAddTrader.resources.lambda.addEnvironment(
+  'DEFAULT_TRADER_GROUP',
+  'Traders',
+);
 
 backend.tradingApi.resources.lambda.addToRolePolicy(
   new PolicyStatement({
-    actions: ['dynamodb:PutItem', 'dynamodb:Query'],
+    actions: ['dynamodb:PutItem', 'dynamodb:Query', 'dynamodb:DeleteItem'],
     resources: [checklistTable.tableArn],
   }),
 );
@@ -100,6 +106,8 @@ const analysis = api.root.addResource('analysis');
 const analysisTrends = analysis.addResource('trends');
 const trades = api.root.addResource('trades');
 const tradesTrends = trades.addResource('trends');
+const confluences = api.root.addResource('confluences');
+const confluencesBase = confluences.addResource('base');
 const integration = new LambdaIntegration(backend.tradingApi.resources.lambda);
 
 checks.addMethod('POST', integration, {
@@ -148,6 +156,36 @@ trades.addMethod('DELETE', integration, {
 });
 
 tradesTrends.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+confluences.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+confluences.addMethod('POST', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+confluences.addMethod('DELETE', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+confluencesBase.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+confluencesBase.addMethod('POST', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+confluencesBase.addMethod('DELETE', integration, {
   authorizationType: AuthorizationType.COGNITO,
   authorizer,
 });

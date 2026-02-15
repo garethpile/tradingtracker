@@ -335,6 +335,45 @@ fieldset {
   border-radius: 0.5rem;
 }
 
+.confluence-manage-card {
+  margin-top: 0.9rem;
+  border: 1px solid #d9e4f7;
+  border-radius: 0.8rem;
+  padding: 0.9rem;
+  background: #f8fbff;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.confluence-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.confluence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.55rem;
+}
+
+.confluence-pill {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+  border: 1px solid #dbe8fb;
+  border-radius: 0.7rem;
+  padding: 0.45rem 0.55rem;
+  background: #fff;
+}
+
+.confluence-pill small {
+  color: #3c587d;
+  font-weight: 700;
+}
+
 .history-table {
   width: 100%;
   border-collapse: collapse;
@@ -386,6 +425,14 @@ fieldset {
   }
 
   .split-rollups {
+    grid-template-columns: 1fr;
+  }
+
+  .confluence-form {
+    grid-template-columns: 1fr;
+  }
+
+  .confluence-grid {
     grid-template-columns: 1fr;
   }
 

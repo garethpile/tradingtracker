@@ -103,13 +103,29 @@ type TradeLogPayload = {
   chartLink?: string;
 };
 
+type ConfluencePayload = {
+  name: string;
+};
+
+const baseConfluenceFallback = [
+  'Higher timeframe bias alignmnet',
+  'Break & retest',
+  'Rejection at high',
+  'Moving average - Bullish - Price above 21 & 50 SMA',
+  'Moving average - Bullish - 21 crossing above 50',
+  'RSI - Above 55',
+  'RSI - Below 45',
+  'MACD - Histogram expanding in dorection of trade',
+];
+const baseConfluenceUserId = '__BASE_CONFLUENCES__';
+
 const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
   headers: {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
   },
   body: JSON.stringify(payload),
 });
@@ -122,6 +138,47 @@ const getUserSub = (event: APIGatewayProxyEvent): string | undefined => {
 
   return claims.sub;
 };
+
+const getUserGroups = (event: APIGatewayProxyEvent): string[] => {
+  const claims = event.requestContext.authorizer?.claims;
+  if (!claims) {
+    return [];
+  }
+
+  const rawGroups = claims['cognito:groups'];
+  if (!rawGroups) {
+    return [];
+  }
+
+  if (Array.isArray(rawGroups)) {
+    return rawGroups.map((item) => String(item).trim()).filter((item) => item.length > 0);
+  }
+
+  if (typeof rawGroups === 'string') {
+    const trimmed = rawGroups.trim();
+    if (trimmed.length === 0) {
+      return [];
+    }
+
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).trim()).filter((item) => item.length > 0);
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    return trimmed.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+  }
+
+  return [];
+};
+
+const isAdministrator = (event: APIGatewayProxyEvent): boolean =>
+  getUserGroups(event).includes('Administrators');
 
 const scoreEntry = (item: ChecklistPayload): number => {
   const checks = [
@@ -255,6 +312,9 @@ const getWeekEndingSunday = (value: string): string => {
   date.setUTCDate(date.getUTCDate() + diff);
   return date.toISOString().slice(0, 10);
 };
+
+const normalizeConfluenceName = (value: string): string =>
+  value.trim().replace(/\s+/g, ' ').toLowerCase();
 
 const toNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -665,6 +725,305 @@ export const handler = async (
     );
 
     return json(201, item);
+  }
+
+  if (routeKey.endsWith('GET /confluences') || routeKey.endsWith('GET /confluences/base')) {
+    const [baseResult, customResult] = await Promise.all([
+      client.send(
+        new QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+          FilterExpression: 'itemType = :baseConfluenceItemType',
+          ExpressionAttributeValues: {
+            ':userId': baseConfluenceUserId,
+            ':startIso': '0000-01-01T00:00:00.000Z',
+            ':baseConfluenceItemType': 'BASE_CONFLUENCE',
+          },
+          ScanIndexForward: false,
+        }),
+      ),
+      client.send(
+        new QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+          FilterExpression: 'itemType = :confluenceItemType',
+          ExpressionAttributeValues: {
+            ':userId': userSub,
+            ':startIso': '0000-01-01T00:00:00.000Z',
+            ':confluenceItemType': 'CONFLUENCE',
+          },
+          ScanIndexForward: false,
+        }),
+      ),
+    ]);
+
+    const baseFromDb = (baseResult.Items ?? [])
+      .map((item) => ({
+        id: String(item.id ?? ''),
+        createdAt: String(item.createdAt ?? ''),
+        name: String(item.name ?? '').trim(),
+        isBase: true,
+      }))
+      .filter((item) => item.id.length > 0 && item.createdAt.length > 0 && item.name.length > 0);
+
+    const effectiveBase = baseFromDb.length > 0
+      ? baseFromDb
+      : baseConfluenceFallback.map((name, index) => ({
+        id: `fallback-${index + 1}`,
+        createdAt: '',
+        name,
+        isBase: true,
+      }));
+
+    const custom = (customResult.Items ?? [])
+      .map((item) => ({
+        id: String(item.id ?? ''),
+        createdAt: String(item.createdAt ?? ''),
+        name: String(item.name ?? '').trim(),
+        isBase: false,
+      }))
+      .filter((item) => item.id.length > 0 && item.createdAt.length > 0 && item.name.length > 0);
+
+    const seen = new Set<string>();
+    const base = effectiveBase.filter((item) => {
+      const key = normalizeConfluenceName(item.name);
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+    const uniqueCustom = custom.filter((item) => {
+      const key = normalizeConfluenceName(item.name);
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+
+    return json(200, {
+      items: [...base, ...uniqueCustom],
+      base,
+      custom: uniqueCustom,
+    });
+  }
+
+  if (routeKey.endsWith('POST /confluences')) {
+    if (!event.body) {
+      return json(400, { message: 'Missing request body' });
+    }
+
+    const payload = JSON.parse(event.body) as ConfluencePayload;
+    const name = payload.name?.trim() ?? '';
+    if (name.length < 2 || name.length > 180) {
+      return json(400, { message: 'Confluence name must be between 2 and 180 characters' });
+    }
+
+    const [baseResult, customResult] = await Promise.all([
+      client.send(
+        new QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+          FilterExpression: 'itemType = :baseConfluenceItemType',
+          ExpressionAttributeValues: {
+            ':userId': baseConfluenceUserId,
+            ':startIso': '0000-01-01T00:00:00.000Z',
+            ':baseConfluenceItemType': 'BASE_CONFLUENCE',
+          },
+        }),
+      ),
+      client.send(
+        new QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+          FilterExpression: 'itemType = :confluenceItemType',
+          ExpressionAttributeValues: {
+            ':userId': userSub,
+            ':startIso': '0000-01-01T00:00:00.000Z',
+            ':confluenceItemType': 'CONFLUENCE',
+          },
+        }),
+      ),
+    ]);
+
+    const normalizedRequested = normalizeConfluenceName(name);
+    const baseSetFromDb = new Set(
+      (baseResult.Items ?? [])
+        .map((item) => String(item.name ?? ''))
+        .map((item) => normalizeConfluenceName(item))
+        .filter((item) => item.length > 0),
+    );
+    const normalizedBase = baseSetFromDb.size > 0
+      ? baseSetFromDb
+      : new Set(baseConfluenceFallback.map((item) => normalizeConfluenceName(item)));
+    const customSet = new Set(
+      (customResult.Items ?? [])
+        .map((item) => String(item.name ?? ''))
+        .map((item) => normalizeConfluenceName(item))
+        .filter((item) => item.length > 0),
+    );
+
+    if (normalizedBase.has(normalizedRequested) || customSet.has(normalizedRequested)) {
+      return json(409, { message: 'Confluence already exists' });
+    }
+
+    const createdAt = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const item = {
+      userId: userSub,
+      createdAt,
+      id,
+      itemType: 'CONFLUENCE',
+      name,
+    };
+
+    await client.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: item,
+      }),
+    );
+
+    return json(201, item);
+  }
+
+  if (routeKey.endsWith('POST /confluences/base')) {
+    if (!isAdministrator(event)) {
+      return json(403, { message: 'Administrators only' });
+    }
+
+    if (!event.body) {
+      return json(400, { message: 'Missing request body' });
+    }
+
+    const payload = JSON.parse(event.body) as ConfluencePayload;
+    const name = payload.name?.trim() ?? '';
+    if (name.length < 2 || name.length > 180) {
+      return json(400, { message: 'Confluence name must be between 2 and 180 characters' });
+    }
+
+    const baseResult = await client.send(
+      new QueryCommand({
+        TableName: tableName,
+        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+        FilterExpression: 'itemType = :baseConfluenceItemType',
+        ExpressionAttributeValues: {
+          ':userId': baseConfluenceUserId,
+          ':startIso': '0000-01-01T00:00:00.000Z',
+          ':baseConfluenceItemType': 'BASE_CONFLUENCE',
+        },
+      }),
+    );
+
+    const normalizedRequested = normalizeConfluenceName(name);
+    const existingBase = new Set(
+      (baseResult.Items ?? [])
+        .map((item) => String(item.name ?? ''))
+        .map((item) => normalizeConfluenceName(item))
+        .filter((item) => item.length > 0),
+    );
+    const fallbackSet = new Set(baseConfluenceFallback.map((item) => normalizeConfluenceName(item)));
+    const effectiveBase = existingBase.size > 0 ? existingBase : fallbackSet;
+
+    if (effectiveBase.has(normalizedRequested)) {
+      return json(409, { message: 'Base confluence already exists' });
+    }
+
+    const createdAt = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const item = {
+      userId: baseConfluenceUserId,
+      createdAt,
+      id,
+      itemType: 'BASE_CONFLUENCE',
+      name,
+    };
+
+    await client.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: item,
+      }),
+    );
+
+    return json(201, item);
+  }
+
+  if (routeKey.endsWith('DELETE /confluences')) {
+    const createdAt = event.queryStringParameters?.createdAt;
+    const id = event.queryStringParameters?.id;
+
+    if (!createdAt || !id) {
+      return json(400, { message: 'Missing createdAt or id query parameter' });
+    }
+
+    try {
+      await client.send(
+        new DeleteCommand({
+          TableName: tableName,
+          Key: {
+            userId: userSub,
+            createdAt,
+          },
+          ConditionExpression: 'id = :id AND itemType = :confluenceItemType',
+          ExpressionAttributeValues: {
+            ':id': id,
+            ':confluenceItemType': 'CONFLUENCE',
+          },
+        }),
+      );
+    } catch (error) {
+      const maybeError = error as { name?: string; message?: string };
+      const errorName = maybeError.name ?? '';
+      const errorMessage = maybeError.message ?? '';
+      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
+        return json(404, { message: 'Confluence not found' });
+      }
+      return json(500, { message: 'Failed to delete confluence', detail: errorMessage || 'Unknown error' });
+    }
+
+    return json(200, { deleted: true });
+  }
+
+  if (routeKey.endsWith('DELETE /confluences/base')) {
+    if (!isAdministrator(event)) {
+      return json(403, { message: 'Administrators only' });
+    }
+
+    const createdAt = event.queryStringParameters?.createdAt;
+    const id = event.queryStringParameters?.id;
+
+    if (!createdAt || !id) {
+      return json(400, { message: 'Missing createdAt or id query parameter' });
+    }
+
+    try {
+      await client.send(
+        new DeleteCommand({
+          TableName: tableName,
+          Key: {
+            userId: baseConfluenceUserId,
+            createdAt,
+          },
+          ConditionExpression: 'id = :id AND itemType = :baseConfluenceItemType',
+          ExpressionAttributeValues: {
+            ':id': id,
+            ':baseConfluenceItemType': 'BASE_CONFLUENCE',
+          },
+        }),
+      );
+    } catch (error) {
+      const maybeError = error as { name?: string; message?: string };
+      const errorName = maybeError.name ?? '';
+      const errorMessage = maybeError.message ?? '';
+      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
+        return json(404, { message: 'Base confluence not found' });
+      }
+      return json(500, { message: 'Failed to delete base confluence', detail: errorMessage || 'Unknown error' });
+    }
+
+    return json(200, { deleted: true });
   }
 
   if (routeKey.endsWith('GET /checks')) {

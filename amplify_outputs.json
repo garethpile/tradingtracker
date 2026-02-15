@@ -17,7 +17,18 @@
       "email",
       "phone_number"
     ],
-    "groups": [],
+    "groups": [
+      {
+        "Administrators": {
+          "precedence": 0
+        }
+      },
+      {
+        "Traders": {
+          "precedence": 1
+        }
+      }
+    ],
     "mfa_configuration": "NONE",
     "password_policy": {
       "min_length": 8,
