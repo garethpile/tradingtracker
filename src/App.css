@@ -225,6 +225,14 @@ fieldset {
   align-items: center;
 }
 
+.collapsible-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.45rem;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -317,6 +325,14 @@ fieldset {
 
 .add-confluence {
   justify-self: start;
+}
+
+.icon-button {
+  background: #ffe9e7;
+  color: #9d2c20;
+  border: 1px solid #ffd0cb;
+  padding: 0.3rem 0.45rem;
+  border-radius: 0.5rem;
 }
 
 .history-table {

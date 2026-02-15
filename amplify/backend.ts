@@ -1,5 +1,5 @@
 import { defineBackend } from '@aws-amplify/backend';
-import { Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy, Stack, Tags } from 'aws-cdk-lib';
 import {
   AuthorizationType,
   CognitoUserPoolsAuthorizer,
@@ -18,6 +18,7 @@ const backend = defineBackend({
 });
 
 const apiStack = backend.tradingApi.stack;
+const authStack = backend.auth.stack;
 
 const sanitizeNamePart = (value: string): string =>
   value
@@ -31,6 +32,22 @@ const branchPart = sanitizeNamePart(
   process.env.AWS_BRANCH ?? process.env.AMPLIFY_BRANCH ?? process.env.USER ?? 'sandbox',
 ).slice(0, 30) || 'sandbox';
 const tableName = `tradingtracker-${appIdPart}-${branchPart}-sessions`;
+const deploymentEnv = process.env.AWS_BRANCH ?? process.env.AMPLIFY_BRANCH ?? 'sandbox';
+
+const commonTags: Record<string, string> = {
+  Project: 'TradingTracker',
+  Application: 'TradingTrackerWeb',
+  Environment: deploymentEnv,
+  ManagedBy: 'AmplifyGen2',
+  CostCenter: 'Trading',
+  Owner: 'Pile',
+  Repository: 'garethpile/tradingtracker',
+};
+
+for (const [key, value] of Object.entries(commonTags)) {
+  Tags.of(apiStack).add(key, value);
+  Tags.of(authStack).add(key, value);
+}
 
 const checklistTable = new Table(apiStack, 'TradingChecklistTable', {
   tableName,
@@ -121,6 +138,11 @@ trades.addMethod('POST', integration, {
 });
 
 trades.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+trades.addMethod('DELETE', integration, {
   authorizationType: AuthorizationType.COGNITO,
   authorizer,
 });

@@ -4,6 +4,7 @@ import type {
 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
+  DeleteCommand,
   DynamoDBDocumentClient,
   PutCommand,
   QueryCommand,
@@ -243,15 +244,15 @@ const getStartIsoForDays = (days: number): string => {
   return now.toISOString();
 };
 
-const getWeekStart = (value: string): string => {
+const getWeekEndingSunday = (value: string): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
   const day = date.getUTCDay();
-  const diff = (day + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - diff);
+  const diff = (7 - day) % 7;
+  date.setUTCDate(date.getUTCDate() + diff);
   return date.toISOString().slice(0, 10);
 };
 
@@ -484,7 +485,7 @@ const buildTradeTrendReport = (items: Array<Record<string, unknown>>) => {
       rrCount += 1;
     }
 
-    const weekKey = getWeekStart(tradeDate);
+    const weekKey = getWeekEndingSunday(tradeDate);
     const week = weekly.get(weekKey) ?? {
       trades: 0,
       netProfit: 0,
@@ -550,14 +551,14 @@ const buildTradeTrendReport = (items: Array<Record<string, unknown>>) => {
     averageRiskRewardRatio: Number((rrTotal / Math.max(rrCount, 1)).toFixed(2)),
     averageJournalScore: Number((scoreTotal / items.length).toFixed(1)),
     weeklyStats: Array.from(weekly.entries())
-      .map(([weekStart, value]) => ({
-        weekStart,
+      .map(([weekEnding, value]) => ({
+        weekEnding,
         trades: value.trades,
         netProfit: Number(value.netProfit.toFixed(2)),
         winRate: Number(((value.wins / Math.max(value.trades, 1)) * 100).toFixed(1)),
         averageRiskRewardRatio: Number((value.rrTotal / Math.max(value.rrCount, 1)).toFixed(2)),
       }))
-      .sort((a, b) => a.weekStart.localeCompare(b.weekStart)),
+      .sort((a, b) => a.weekEnding.localeCompare(b.weekEnding)),
     byStrategy: toRollupArray(byStrategy).sort((a, b) => b.trades - a.trades),
     byAsset: toRollupArray(byAsset).sort((a, b) => b.trades - a.trades),
   };
@@ -732,6 +733,40 @@ export const handler = async (
     return json(200, {
       items: result.Items ?? [],
     });
+  }
+
+  if (routeKey.endsWith('DELETE /trades')) {
+    const createdAt = event.queryStringParameters?.createdAt;
+    const id = event.queryStringParameters?.id;
+
+    if (!createdAt || !id) {
+      return json(400, { message: 'Missing createdAt or id query parameter' });
+    }
+
+    try {
+      await client.send(
+        new DeleteCommand({
+          TableName: tableName,
+          Key: {
+            userId: userSub,
+            createdAt,
+          },
+          ConditionExpression: 'id = :id AND itemType = :tradeItemType',
+          ExpressionAttributeValues: {
+            ':id': id,
+            ':tradeItemType': 'TRADE_LOG',
+          },
+        }),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Delete failed';
+      if (message.includes('ConditionalCheckFailedException')) {
+        return json(404, { message: 'Trade log not found' });
+      }
+      throw error;
+    }
+
+    return json(200, { deleted: true });
   }
 
   if (routeKey.endsWith('GET /checks/trends')) {

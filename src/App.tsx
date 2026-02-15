@@ -159,7 +159,7 @@ type TradeTrendResponse = {
   averageRiskRewardRatio: number;
   averageJournalScore: number;
   weeklyStats: Array<{
-    weekStart: string;
+    weekEnding: string;
     trades: number;
     netProfit: number;
     winRate: number;
@@ -427,6 +427,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [tradeTrends, setTradeTrends] = useState<TradeTrendResponse | null>(null);
 
   const [days, setDays] = useState(30);
+  const [tradeFormOpen, setTradeFormOpen] = useState(true);
+  const [tradeStatsOpen, setTradeStatsOpen] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -543,6 +545,26 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       await loadData();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save trade log');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteTradeLog = async (item: TradeLogItem) => {
+    const confirmed = window.confirm('Delete this trade log entry? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await apiCall<{ deleted: boolean }>(`trades?createdAt=${encodeURIComponent(item.createdAt)}&id=${encodeURIComponent(item.id)}`, {
+        method: 'DELETE',
+      });
+      await loadData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete trade log');
     } finally {
       setBusy(false);
     }
@@ -809,7 +831,14 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       {activeTab === 'trades' && (
         <>
           <section className="panel">
-            <h2>Trading Journal</h2>
+            <div className="collapsible-header">
+              <h2>Trading Journal</h2>
+              <button type="button" className="ghost" onClick={() => setTradeFormOpen((prev) => !prev)}>
+                {tradeFormOpen ? 'Collapse' : 'Expand'}
+              </button>
+            </div>
+            {tradeFormOpen && (
+              <>
             <p className="subtitle">Step 1 after opening: date, time, asset, strategy, confluences, entry, SL, TP, and estimated outcomes. Step 2 after closing: exit price, trade profit (auto), feelings, chart link, and comments. Step 3: weekly net profit, win rate, and average R/R are calculated automatically.</p>
             <form className="market-form" onSubmit={saveTradeLog}>
               <fieldset>
@@ -893,11 +922,19 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
 
               <div className="form-footer"><span /><button type="submit" disabled={busy}>Save Trade Log</button></div>
             </form>
+              </>
+            )}
           </section>
 
           <section className="panel">
-            <h2>Trade Log Statistics</h2>
-            {tradeTrends ? (
+            <div className="collapsible-header">
+              <h2>Trade Log Statistics</h2>
+              <button type="button" className="ghost" onClick={() => setTradeStatsOpen((prev) => !prev)}>
+                {tradeStatsOpen ? 'Collapse' : 'Expand'}
+              </button>
+            </div>
+            {tradeStatsOpen && (
+            tradeTrends ? (
               <>
                 <div className="stats-grid">
                   <div className="stat-card"><p>Total trades</p><h3>{tradeTrends.totalTrades}</h3></div>
@@ -910,10 +947,10 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 <h3 className="section-title">Weekly Statistics (Step 3)</h3>
                 <div className="history-table-wrapper">
                   <table className="history-table">
-                    <thead><tr><th>Week start</th><th>Trades</th><th>Net profit</th><th>Win rate</th><th>Avg R/R</th></tr></thead>
+                    <thead><tr><th>Week ending (Sunday)</th><th>Trades</th><th>Net profit</th><th>Win rate</th><th>Avg R/R</th></tr></thead>
                     <tbody>
                       {tradeTrends.weeklyStats.map((item) => (
-                        <tr key={item.weekStart}><td>{item.weekStart}</td><td>{item.trades}</td><td>{item.netProfit}</td><td>{item.winRate}%</td><td>{item.averageRiskRewardRatio}</td></tr>
+                        <tr key={item.weekEnding}><td>{item.weekEnding}</td><td>{item.trades}</td><td>{item.netProfit}</td><td>{item.winRate}%</td><td>{item.averageRiskRewardRatio}</td></tr>
                       ))}
                       {tradeTrends.weeklyStats.length === 0 && <tr><td colSpan={5}>No weekly data yet.</td></tr>}
                     </tbody>
@@ -923,12 +960,33 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 <h3 className="section-title">Recent Trade Logs</h3>
                 <div className="history-table-wrapper">
                   <table className="history-table">
-                    <thead><tr><th>Date</th><th>Time</th><th>Asset</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Feeling</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Time</th><th>Asset</th><th>Entry</th><th>Exit</th><th>Profit</th><th>Feeling</th><th /></tr></thead>
                     <tbody>
                       {tradeHistory.map((item) => (
-                        <tr key={item.id}><td>{item.tradeDate}</td><td>{item.tradeTime ?? '-'}</td><td>{item.tradingAsset}</td><td>{item.entryPrice ?? '-'}</td><td>{item.exitPrice ?? '-'}</td><td>{item.totalProfit ?? '-'}</td><td>{item.feelings ?? '-'}</td></tr>
+                        <tr key={item.id}>
+                          <td>{item.tradeDate}</td>
+                          <td>{item.tradeTime ?? '-'}</td>
+                          <td>{item.tradingAsset}</td>
+                          <td>{item.entryPrice ?? '-'}</td>
+                          <td>{item.exitPrice ?? '-'}</td>
+                          <td>{item.totalProfit ?? '-'}</td>
+                          <td>{item.feelings ?? '-'}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="icon-button"
+                              title="Delete trade log"
+                              aria-label="Delete trade log"
+                              onClick={() => void deleteTradeLog(item)}
+                            >
+                              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z" fill="currentColor" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
                       ))}
-                      {tradeHistory.length === 0 && <tr><td colSpan={7}>No trade logs in this period.</td></tr>}
+                      {tradeHistory.length === 0 && <tr><td colSpan={8}>No trade logs in this period.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -965,7 +1023,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                   </article>
                 </div>
               </>
-            ) : <p>Load data to view trade statistics.</p>}
+            ) : <p>Load data to view trade statistics.</p>
+            )}
           </section>
         </>
       )}
