@@ -219,6 +219,12 @@ fieldset {
   align-items: center;
 }
 
+.inline-actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -372,6 +378,39 @@ fieldset {
 .confluence-pill small {
   color: #3c587d;
   font-weight: 700;
+}
+
+.confluence-inline-edit {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.confluence-inline-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 24, 43, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.dialog-card {
+  width: min(960px, 95vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 20px 45px #1f2d3f33;
 }
 
 .history-table {

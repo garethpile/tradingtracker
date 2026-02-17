@@ -80,7 +80,7 @@ backend.postConfirmationAddTrader.resources.lambda.addEnvironment(
 
 backend.tradingApi.resources.lambda.addToRolePolicy(
   new PolicyStatement({
-    actions: ['dynamodb:PutItem', 'dynamodb:Query', 'dynamodb:DeleteItem'],
+    actions: ['dynamodb:PutItem', 'dynamodb:Query', 'dynamodb:DeleteItem', 'dynamodb:UpdateItem'],
     resources: [checklistTable.tableArn],
   }),
 );
@@ -108,7 +108,12 @@ const trades = api.root.addResource('trades');
 const tradesTrends = trades.addResource('trends');
 const confluences = api.root.addResource('confluences');
 const confluencesBase = confluences.addResource('base');
-const integration = new LambdaIntegration(backend.tradingApi.resources.lambda);
+const tradingDays = api.root.addResource('trading-days');
+const tradingSessions = api.root.addResource('trading-sessions');
+const sessionTrades = api.root.addResource('session-trades');
+const integration = new LambdaIntegration(backend.tradingApi.resources.lambda, {
+  allowTestInvoke: false,
+});
 
 checks.addMethod('POST', integration, {
   authorizationType: AuthorizationType.COGNITO,
@@ -156,6 +161,51 @@ trades.addMethod('DELETE', integration, {
 });
 
 tradesTrends.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+tradingDays.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+tradingDays.addMethod('POST', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+tradingDays.addMethod('DELETE', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+tradingSessions.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+tradingSessions.addMethod('POST', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+tradingSessions.addMethod('DELETE', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+sessionTrades.addMethod('GET', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+sessionTrades.addMethod('POST', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
+sessionTrades.addMethod('DELETE', integration, {
   authorizationType: AuthorizationType.COGNITO,
   authorizer,
 });
