@@ -774,8 +774,11 @@ export const handler = async (
     }
 
     const payload = JSON.parse(event.body) as MarketAnalysisPayload;
-    const createdAt = new Date().toISOString();
-    const id = crypto.randomUUID();
+    const existingCreatedAt = event.queryStringParameters?.createdAt;
+    const existingId = event.queryStringParameters?.id;
+    const isUpdate = Boolean(existingCreatedAt && existingId);
+    const createdAt = existingCreatedAt ?? new Date().toISOString();
+    const id = existingId ?? crypto.randomUUID();
 
     const item = {
       userId: userSub,
@@ -786,12 +789,32 @@ export const handler = async (
       analysisScore: scoreAnalysis(payload),
     };
 
-    await client.send(
-      new PutCommand({
-        TableName: tableName,
-        Item: item,
-      }),
-    );
+    if (isUpdate) {
+      try {
+        await client.send(
+          new PutCommand({
+            TableName: tableName,
+            Item: item,
+            ConditionExpression: 'id = :id AND itemType = :analysisItemType',
+            ExpressionAttributeValues: {
+              ':id': id,
+              ':analysisItemType': 'MARKET_ANALYSIS',
+            },
+          }),
+        );
+      } catch (error) {
+        const maybeError = error as { name?: string; message?: string };
+        const errorName = maybeError.name ?? '';
+        const errorMessage = maybeError.message ?? '';
+        if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
+          return json(404, { message: 'Market analysis not found' });
+        }
+        return json(500, { message: 'Failed to update market analysis', detail: errorMessage || 'Unknown error' });
+      }
+      return json(200, item);
+    }
+
+    await client.send(new PutCommand({ TableName: tableName, Item: item }));
 
     return json(201, item);
   }
@@ -1853,6 +1876,41 @@ export const handler = async (
     return json(200, {
       items: result.Items ?? [],
     });
+  }
+
+  if (routeKey.endsWith('DELETE /analysis')) {
+    const createdAt = event.queryStringParameters?.createdAt;
+    const id = event.queryStringParameters?.id;
+    if (!createdAt || !id) {
+      return json(400, { message: 'Missing createdAt or id query parameter' });
+    }
+
+    try {
+      await client.send(
+        new DeleteCommand({
+          TableName: tableName,
+          Key: {
+            userId: userSub,
+            createdAt,
+          },
+          ConditionExpression: 'id = :id AND itemType = :analysisItemType',
+          ExpressionAttributeValues: {
+            ':id': id,
+            ':analysisItemType': 'MARKET_ANALYSIS',
+          },
+        }),
+      );
+    } catch (error) {
+      const maybeError = error as { name?: string; message?: string };
+      const errorName = maybeError.name ?? '';
+      const errorMessage = maybeError.message ?? '';
+      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
+        return json(404, { message: 'Market analysis not found' });
+      }
+      return json(500, { message: 'Failed to delete market analysis', detail: errorMessage || 'Unknown error' });
+    }
+
+    return json(200, { deleted: true, createdAt, id });
   }
 
   if (routeKey.endsWith('GET /trades')) {

@@ -140,6 +140,11 @@ analysis.addMethod('GET', integration, {
   authorizer,
 });
 
+analysis.addMethod('DELETE', integration, {
+  authorizationType: AuthorizationType.COGNITO,
+  authorizer,
+});
+
 analysisTrends.addMethod('GET', integration, {
   authorizationType: AuthorizationType.COGNITO,
   authorizer,
