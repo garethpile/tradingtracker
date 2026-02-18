@@ -152,6 +152,12 @@ button.ghost {
   gap: 0.7rem;
 }
 
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.7rem;
+}
+
 .analysis-rows {
   display: grid;
   gap: 0.5rem;
@@ -296,82 +302,223 @@ fieldset {
 
 .market-structure-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border-top: 1px solid #cbcfd6;
 }
 
 .market-structure-row {
   display: grid;
-  grid-template-columns: 84px 1fr 120px;
-  gap: 0.5rem;
+  grid-template-columns: 110px 1fr 120px;
+  gap: 0;
   align-items: center;
+  border: 1px solid #cbcfd6;
+  border-top: 0;
+  background: #fff;
+}
+
+.market-structure-row > span {
+  padding: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-right: 1px solid #cbcfd6;
 }
 
 .analysis-pdf-stack {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
 }
 
 .analysis-pdf-section {
-  border: 1px solid #d9e4f7;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  background: #f8fbff;
+  border: 1px solid #c5cad2;
+  border-radius: 0;
+  padding: 0;
+  background: #fff;
 }
 
 .analysis-pdf-section h4 {
   margin: 0;
-  font-size: 1.02rem;
+  font-size: 1.12rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.analysis-pdf-root {
+  border: 1px solid #aeb5be;
+  background: #f4f4f4;
+}
+
+.market-form-pdf legend {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.analysis-meta-grid {
+  padding: 0.3rem 0.2rem 0.8rem;
+}
+
+.market-form-pdf label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.market-form-pdf input,
+.market-form-pdf select,
+.market-form-pdf textarea {
+  border-radius: 0;
+  border: 1px solid #9fa8b4;
+  background: #fff;
+  font-weight: 500;
+  text-transform: none;
+}
+
+.analysis-pdf-header {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.analysis-pdf-header-black {
+  background: #050505;
+  color: #fff;
+  border-bottom: 1px solid #050505;
+}
+
+.analysis-pdf-header-black .collapse-icon-button {
+  background: #1b1b1b;
+  border-color: #373737;
+  color: #fff;
+}
+
+.analysis-pdf-table .analysis-choice-grid,
+.analysis-pdf-table label,
+.analysis-pdf-section .grid-3,
+.analysis-pdf-section .grid-2,
+.analysis-pdf-section .market-structure-grid,
+.analysis-pdf-section .analysis-column-totals,
+.analysis-pdf-section .radio-inline {
+  padding: 0.6rem 0.75rem;
 }
 
 .analysis-choice-grid {
   display: grid;
-  gap: 0.5rem;
+  gap: 0;
+  border-top: 1px solid #cbcfd6;
 }
 
 .analysis-column-totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin-top: 0.4rem;
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid #cbcfd6;
+  padding-top: 0;
 }
 
 .analysis-column-totals span {
-  border: 1px solid #dbe8fb;
-  border-radius: 0.5rem;
-  background: #fff;
-  padding: 0.35rem 0.55rem;
+  border: 1px solid #cbcfd6;
+  border-top: 0;
+  background: #f5f7fa;
+  padding: 0.55rem;
   font-weight: 700;
-  color: #213a58;
+  color: #121923;
   text-align: center;
+  text-transform: uppercase;
 }
 
 .analysis-choice-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr);
-  gap: 0.5rem;
+  grid-template-columns: minmax(240px, 1fr) minmax(360px, 2fr);
+  gap: 0;
   align-items: center;
+  border: 1px solid #cbcfd6;
+  border-top: 0;
+  background: #fff;
+}
+
+.analysis-choice-row > span {
+  padding: 0.65rem 0.7rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-right: 1px solid #cbcfd6;
 }
 
 .choice-box-group {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
 }
 
 .choice-box {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  border: 1px solid #dbe8fb;
-  border-radius: 0.5rem;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 0;
+  border-left: 1px solid #cbcfd6;
+  min-height: 44px;
   background: #fff;
-  padding: 0.3rem 0.5rem;
-  min-height: 32px;
+  padding: 0.35rem 0.4rem;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.choice-box:first-child {
+  border-left: 0;
 }
 
 .choice-box input {
   margin: 0;
+  accent-color: #0e1116;
+}
+
+.analysis-choice-columns {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #cbcfd6;
+  border-left: 1px solid #cbcfd6;
+  border-right: 1px solid #cbcfd6;
+  background: #0d0d0d;
+  color: #fff;
+}
+
+.analysis-choice-columns span {
+  padding: 0.45rem 0.55rem;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.analysis-choice-columns span:first-child {
+  text-align: left;
+}
+
+.zone-block {
+  margin: 0.65rem 0.75rem;
+  border: 1px solid #cbcfd6;
+}
+
+.zone-block h5 {
+  margin: 0;
+  color: #fff;
+  padding: 0.55rem 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 1rem;
+}
+
+.zone-block .grid-3,
+.zone-block .grid-2 {
+  padding: 0.55rem;
+}
+
+.zone-block-red h5 {
+  background: #ef2a24;
+}
+
+.zone-block-blue h5 {
+  background: #1a39ff;
 }
 
 .radio-inline {
@@ -383,7 +530,8 @@ fieldset {
 
 .radio-inline > span {
   font-weight: 700;
-  color: #263d5d;
+  color: #1a1a1a;
+  text-transform: uppercase;
 }
 
 .radio-inline label {
@@ -395,6 +543,9 @@ fieldset {
 
 .radio-inline.compact {
   gap: 0.4rem;
+  border: 1px solid #cbcfd6;
+  padding: 0.45rem 0.55rem;
+  background: #fff;
 }
 
 .history-table-wrapper {

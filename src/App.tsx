@@ -981,18 +981,18 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   };
 
   const renderMarketAnalysisForm = () => (
-    <form className="market-form" onSubmit={saveAnalysis}>
-      <fieldset>
+    <form className="market-form market-form-pdf" onSubmit={saveAnalysis}>
+      <fieldset className="analysis-pdf-root">
         <legend>Market Analysis</legend>
-        <div className="grid-4">
+        <div className="grid-4 analysis-meta-grid">
           <label>Pair<input value={analysisForm.pair} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, pair: event.target.value }))} /></label>
           <label>Date<input type="date" value={analysisForm.tradingDate} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingDate: event.target.value }))} required /></label>
           <label>Time<input type="time" value={analysisTime} onChange={(event) => setAnalysisTime(event.target.value)} required /></label>
           <label>Session<select value={analysisForm.sessionName} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
         </div>
         <div className="analysis-pdf-stack">
-          <section className="analysis-pdf-section">
-            <div className="collapsible-header">
+          <section className="analysis-pdf-section analysis-pdf-table">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
               <h4>Pre-Market Checklist</h4>
               <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('preMarket')} aria-label={analysisSectionOpen.preMarket ? 'Collapse pre-market checklist' : 'Expand pre-market checklist'} title={analysisSectionOpen.preMarket ? 'Collapse' : 'Expand'}>
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.preMarket ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
@@ -1000,6 +1000,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             </div>
             {analysisSectionOpen.preMarket && (
               <>
+                <div className="analysis-choice-columns">
+                  <span />
+                  <span>Bullish</span>
+                  <span>Bearish</span>
+                  <span>Consolidation</span>
+                </div>
                 <div className="analysis-choice-grid">
                   {preMarketChecklistFields.map((field) => (
                     <div key={field.key} className="analysis-choice-row">
@@ -1029,7 +1035,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             )}
           </section>
           <section className="analysis-pdf-section">
-            <div className="collapsible-header">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
               <h4>Price Action</h4>
               <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('priceAction')} aria-label={analysisSectionOpen.priceAction ? 'Collapse price action' : 'Expand price action'} title={analysisSectionOpen.priceAction ? 'Collapse' : 'Expand'}>
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.priceAction ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
@@ -1049,7 +1055,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             )}
           </section>
           <section className="analysis-pdf-section">
-            <div className="collapsible-header">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
               <h4>News Notes (GMT+2)</h4>
               <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('newsNotes')} aria-label={analysisSectionOpen.newsNotes ? 'Collapse news notes' : 'Expand news notes'} title={analysisSectionOpen.newsNotes ? 'Collapse' : 'Expand'}>
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.newsNotes ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
@@ -1067,7 +1073,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             )}
           </section>
           <section className="analysis-pdf-section">
-            <div className="collapsible-header">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
               <h4>Pull Back Trading Levels</h4>
               <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('pullBackLevels')} aria-label={analysisSectionOpen.pullBackLevels ? 'Collapse pull back levels' : 'Expand pull back levels'} title={analysisSectionOpen.pullBackLevels ? 'Collapse' : 'Expand'}>
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.pullBackLevels ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
@@ -1076,7 +1082,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             {analysisSectionOpen.pullBackLevels && <div className="grid-3"><label>Sell RSI level (overbought)<input value={analysisForm.sellRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellRsiLevel: event.target.value }))} /></label><label>Buy RSI level (oversold)<input value={analysisForm.buyRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyRsiLevel: event.target.value }))} /></label></div>}
           </section>
           <section className="analysis-pdf-section">
-            <div className="collapsible-header">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
               <h4>Trading Notes</h4>
               <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('tradingNotes')} aria-label={analysisSectionOpen.tradingNotes ? 'Collapse trading notes' : 'Expand trading notes'} title={analysisSectionOpen.tradingNotes ? 'Collapse' : 'Expand'}>
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.tradingNotes ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
@@ -1095,7 +1101,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             )}
           </section>
           <section className="analysis-pdf-section">
-            <div className="collapsible-header">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
               <h4>Potential Zones</h4>
               <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('potentialZones')} aria-label={analysisSectionOpen.potentialZones ? 'Collapse potential zones' : 'Expand potential zones'} title={analysisSectionOpen.potentialZones ? 'Collapse' : 'Expand'}>
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.potentialZones ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
@@ -1103,15 +1109,29 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             </div>
             {analysisSectionOpen.potentialZones && (
               <>
-                <div className="grid-3"><label>Potential sell zone 1<input value={analysisForm.sellZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone1: event.target.value }))} /></label><label>Potential sell zone 2<input value={analysisForm.sellZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone2: event.target.value }))} /></label><label>Potential sell zone 3<input value={analysisForm.sellZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone3: event.target.value }))} /></label></div>
-                <div className="grid-3"><label>Potential buy zone 1<input value={analysisForm.buyZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone1: event.target.value }))} /></label><label>Potential buy zone 2<input value={analysisForm.buyZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone2: event.target.value }))} /></label><label>Potential buy zone 3<input value={analysisForm.buyZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone3: event.target.value }))} /></label></div>
-                <div className="grid-3"><label>Potential reversal zone 1<input value={analysisForm.reversalZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone1: event.target.value }))} /></label><label>Potential reversal zone 2<input value={analysisForm.reversalZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone2: event.target.value }))} /></label></div>
-                <div className="grid-3"><label>Potential swing zone 1<input value={analysisForm.swingZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone1: event.target.value }))} /></label><label>Potential swing zone 2<input value={analysisForm.swingZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone2: event.target.value }))} /></label></div>
+                <div className="zone-block zone-block-red">
+                  <h5>Potential Sell Zones</h5>
+                  <div className="grid-3"><label>Zone 1<input value={analysisForm.sellZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone1: event.target.value }))} /></label><label>Zone 2<input value={analysisForm.sellZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone2: event.target.value }))} /></label><label>Zone 3<input value={analysisForm.sellZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone3: event.target.value }))} /></label></div>
+                </div>
+                <div className="zone-block zone-block-blue">
+                  <h5>Potential Buy Zones</h5>
+                  <div className="grid-3"><label>Zone 1<input value={analysisForm.buyZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone1: event.target.value }))} /></label><label>Zone 2<input value={analysisForm.buyZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone2: event.target.value }))} /></label><label>Zone 3<input value={analysisForm.buyZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone3: event.target.value }))} /></label></div>
+                </div>
+                <div className="grid-2">
+                  <div className="zone-block zone-block-red">
+                    <h5>Potential Reversal Zones</h5>
+                    <div className="grid-2"><label>Zone 1<input value={analysisForm.reversalZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone1: event.target.value }))} /></label><label>Zone 2<input value={analysisForm.reversalZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone2: event.target.value }))} /></label></div>
+                  </div>
+                  <div className="zone-block zone-block-blue">
+                    <h5>Potential Swing Zones</h5>
+                    <div className="grid-2"><label>Zone 1<input value={analysisForm.swingZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone1: event.target.value }))} /></label><label>Zone 2<input value={analysisForm.swingZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone2: event.target.value }))} /></label></div>
+                  </div>
+                </div>
               </>
             )}
           </section>
           <section className="analysis-pdf-section">
-            <div className="collapsible-header">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
               <h4>Market Structure</h4>
               <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('marketStructure')} aria-label={analysisSectionOpen.marketStructure ? 'Collapse market structure' : 'Expand market structure'} title={analysisSectionOpen.marketStructure ? 'Collapse' : 'Expand'}>
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.marketStructure ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
