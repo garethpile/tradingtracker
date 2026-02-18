@@ -602,6 +602,16 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     () => lotSizeOptions.find((option) => option.lotSize === selectedLotSize) ?? lotSizeOptions[1],
     [selectedLotSize],
   );
+  const preMarketCounts = useMemo(() => {
+    const counts = { bullish: 0, bearish: 0, consolidation: 0 };
+    preMarketChecklistFields.forEach((field) => {
+      const value = analysisForm[field.key];
+      if (value === 'bullish' || value === 'bearish' || value === 'consolidation') {
+        counts[value] += 1;
+      }
+    });
+    return counts;
+  }, [analysisForm]);
   const totalAmountNumber = useMemo(() => toNumberOrUndefined(totalAmountToLose) ?? 0, [totalAmountToLose]);
   const riskRewardRatioNumber = useMemo(() => toNumberOrUndefined(riskRewardRatioCalc) ?? 2, [riskRewardRatioCalc]);
   const dividedBy100Trades = useMemo(
@@ -634,6 +644,20 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const toggleTradingDaySection = (section: keyof typeof tradingDaySectionOpen) => {
     setTradingDaySectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
   };
+
+  useEffect(() => {
+    const ranking: Array<'bullish' | 'bearish' | 'consolidation'> = ['bullish', 'bearish', 'consolidation'];
+    const nextConclusion = ranking.reduce((winner, candidate) => (
+      preMarketCounts[candidate] > preMarketCounts[winner] ? candidate : winner
+    ), ranking[0]);
+
+    setAnalysisForm((prev) => {
+      if (prev.conclusion === nextConclusion) {
+        return prev;
+      }
+      return { ...prev, conclusion: nextConclusion };
+    });
+  }, [preMarketCounts]);
 
   useEffect(() => {
     void (async () => {
@@ -964,6 +988,11 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                     <option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="bearishConsolidation">Bearish Consolidation</option><option value="bullishConsolidation">Bullish Consolidation</option>
                   </select>
                 </label>
+                <div className="analysis-column-totals">
+                  <span>Bullish: {preMarketCounts.bullish}</span>
+                  <span>Bearish: {preMarketCounts.bearish}</span>
+                  <span>Consolidation: {preMarketCounts.consolidation}</span>
+                </div>
               </>
             )}
           </section>
@@ -1789,12 +1818,16 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                       {isImageLikeUrl(tradeForm.chartLink) ? (
                         <img src={tradeForm.chartLink} alt="Trade chart" />
                       ) : (
-                        <iframe
-                          src={tradeForm.chartLink}
-                          title="Trade chart preview"
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="chart-preview-placeholder">
+                          <p>Preview unavailable for this link.</p>
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => window.open(tradeForm.chartLink, '_blank', 'noopener,noreferrer')}
+                          >
+                            Open chart in new tab
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
