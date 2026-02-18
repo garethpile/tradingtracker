@@ -123,7 +123,7 @@ type TradingSessionPayload = {
 
 type SessionTradePayload = {
   dayId: string;
-  sessionId: string;
+  sessionId?: string;
   tradeDate: string;
   tradeTime?: string;
   tradingAsset: string;
@@ -936,6 +936,15 @@ export const handler = async (
     const existingCreatedAt = event.queryStringParameters?.createdAt;
     const existingId = event.queryStringParameters?.id;
     const isUpdate = Boolean(existingCreatedAt && existingId);
+    if (!isUpdate) {
+      const allItems = await getAllUserItems(userSub);
+      const duplicate = allItems.find(
+        (item) => item.itemType === 'TRADING_DAY' && String(item.tradingDate ?? '') === payload.tradingDate,
+      );
+      if (duplicate) {
+        return json(409, { message: 'A trading day already exists for this date' });
+      }
+    }
     const createdAt = existingCreatedAt ?? new Date().toISOString();
     const id = existingId ?? crypto.randomUUID();
     const item = {
@@ -1276,8 +1285,8 @@ export const handler = async (
     }
 
     const payload = JSON.parse(event.body) as SessionTradePayload;
-    if (!payload.dayId || !payload.sessionId || !payload.tradeDate || !payload.tradingAsset || !payload.strategy) {
-      return json(400, { message: 'Missing required fields: dayId, sessionId, tradeDate, tradingAsset, strategy' });
+    if (!payload.dayId || !payload.tradeDate || !payload.tradingAsset || !payload.strategy) {
+      return json(400, { message: 'Missing required fields: dayId, tradeDate, tradingAsset, strategy' });
     }
 
     const existingCreatedAt = event.queryStringParameters?.createdAt;
@@ -1293,6 +1302,7 @@ export const handler = async (
       id,
       itemType: 'SESSION_TRADE',
       ...payload,
+      sessionId: payload.sessionId ?? payload.dayId,
       confluences: (payload.confluences ?? []).map((entry) => entry.trim()).filter((entry) => entry.length > 0),
       estimatedLoss: derived.estimatedLoss ?? payload.estimatedLoss,
       estimatedProfit: derived.estimatedProfit ?? payload.estimatedProfit,
@@ -1331,13 +1341,22 @@ export const handler = async (
 
   if (routeKey.endsWith('GET /session-trades')) {
     const sessionId = event.queryStringParameters?.sessionId;
-    if (!sessionId) {
-      return json(400, { message: 'Missing sessionId query parameter' });
+    const dayId = event.queryStringParameters?.dayId;
+    if (!sessionId && !dayId) {
+      return json(400, { message: 'Missing sessionId or dayId query parameter' });
     }
 
     const allItems = await getAllUserItems(userSub);
     const items = allItems
-      .filter((item) => item.itemType === 'SESSION_TRADE' && String(item.sessionId ?? '') === sessionId)
+      .filter((item) => {
+        if (item.itemType !== 'SESSION_TRADE') {
+          return false;
+        }
+        if (sessionId) {
+          return String(item.sessionId ?? '') === sessionId;
+        }
+        return String(item.dayId ?? '') === dayId;
+      })
       .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
 
     return json(200, { items });

@@ -302,9 +302,82 @@ fieldset {
 
 .market-structure-row {
   display: grid;
-  grid-template-columns: 80px 110px 1fr;
+  grid-template-columns: 84px 1fr 120px;
   gap: 0.5rem;
   align-items: center;
+}
+
+.analysis-pdf-stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.analysis-pdf-section {
+  border: 1px solid #d9e4f7;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: #f8fbff;
+}
+
+.analysis-pdf-section h4 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.analysis-choice-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.analysis-choice-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.choice-box-group {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.choice-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #dbe8fb;
+  border-radius: 0.5rem;
+  background: #fff;
+  padding: 0.3rem 0.5rem;
+  min-height: 32px;
+}
+
+.choice-box input {
+  margin: 0;
+}
+
+.radio-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.radio-inline > span {
+  font-weight: 700;
+  color: #263d5d;
+}
+
+.radio-inline label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.radio-inline.compact {
+  gap: 0.4rem;
 }
 
 .history-table-wrapper {
@@ -347,8 +420,39 @@ fieldset {
   border: 1px solid #bfe7de;
 }
 
+.collapse-icon-button {
+  background: #eaf1ff;
+  color: #28415f;
+  border: 1px solid #d0dcf0;
+}
+
 .selected-row {
   background: #edf7f5;
+}
+
+.trade-calc-panel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.lot-radio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 0.55rem;
+}
+
+.lot-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid #dbe8fb;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+}
+
+.trade-calc-stats {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .confluence-manage-card {
@@ -473,6 +577,10 @@ fieldset {
     grid-template-columns: 1fr;
   }
 
+  .analysis-choice-row {
+    grid-template-columns: 1fr;
+  }
+
   .split-rollups {
     grid-template-columns: 1fr;
   }
@@ -482,6 +590,14 @@ fieldset {
   }
 
   .confluence-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lot-radio-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trade-calc-stats {
     grid-template-columns: 1fr;
   }
 
