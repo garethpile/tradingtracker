@@ -394,6 +394,25 @@ const toInputString = (value?: number): string => {
   return String(value);
 };
 
+const toFixed2OrEmpty = (value?: number): string => {
+  if (value === undefined || Number.isNaN(value)) {
+    return '';
+  }
+  return value.toFixed(2);
+};
+
+const toFixed2OrDash = (value?: number): string => {
+  if (value === undefined || Number.isNaN(value)) {
+    return '-';
+  }
+  return value.toFixed(2);
+};
+
+const isImageLikeUrl = (value: string): boolean => {
+  const normalized = value.toLowerCase().split('?')[0].split('#')[0];
+  return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'].some((ext) => normalized.endsWith(ext));
+};
+
 const computeEstimatedLoss = (entry?: number, stopLoss?: number): number | undefined => {
   if (entry === undefined || stopLoss === undefined) {
     return undefined;
@@ -1697,7 +1716,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td>{trade.tradingAsset}</td>
                             <td>{trade.tradeSide ?? '-'}</td>
                             <td>{trade.strategy ?? '-'}</td>
-                            <td>{trade.totalProfit ?? '-'}</td>
+                            <td>{toFixed2OrDash(trade.totalProfit)}</td>
                             <td>{trade.chartLink ? <a href={trade.chartLink} target="_blank" rel="noreferrer">Open link</a> : '-'}</td>
                             <td><button type="button" className="ghost" onClick={() => openTradeDialog(trade)}>View / Edit</button></td>
                           </tr>
@@ -1737,12 +1756,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                     <label>Take profit price<input type="number" step="0.01" value={tradeForm.takeProfitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, takeProfitPrice: event.target.value }))} /></label>
                   </div>
                   <div className="grid-3">
-                    <label>Estimated loss (auto)<input readOnly value={estimatedLossValue ?? ''} /></label>
-                    <label>Estimated profit (auto)<input readOnly value={estimatedProfitValue ?? ''} /></label>
+                    <label>Estimated loss (auto)<input readOnly value={toFixed2OrEmpty(estimatedLossValue)} /></label>
+                    <label>Estimated profit (auto)<input readOnly value={toFixed2OrEmpty(estimatedProfitValue)} /></label>
                     <label>Exit price<input type="number" step="0.01" value={tradeForm.exitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, exitPrice: event.target.value }))} /></label>
                   </div>
                   <div className="grid-3">
-                    <label>Trade profit (auto)<input readOnly value={tradeProfitValue ?? ''} /></label>
+                    <label>Trade profit (auto)<input readOnly value={toFixed2OrEmpty(tradeProfitValue)} /></label>
                     <label>Feelings<select value={tradeForm.feelings} onChange={(event) => setTradeForm((prev) => ({ ...prev, feelings: event.target.value as TradeLogFormState['feelings'] }))}><option>Satisfied</option><option>Neutral</option><option>Disappointed</option><option>Not filled</option></select></label>
                   </div>
                   <label>
@@ -1764,6 +1783,20 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                   <label>Price chart link<input value={tradeForm.chartLink} onChange={(event) => setTradeForm((prev) => ({ ...prev, chartLink: event.target.value }))} /></label>
                   {tradeForm.chartLink.trim().length > 0 && (
                     <a href={tradeForm.chartLink} target="_blank" rel="noreferrer">Open chart hyperlink</a>
+                  )}
+                  {tradeForm.chartLink.trim().length > 0 && (
+                    <div className="chart-preview-square" aria-label="Chart preview">
+                      {isImageLikeUrl(tradeForm.chartLink) ? (
+                        <img src={tradeForm.chartLink} alt="Trade chart" />
+                      ) : (
+                        <iframe
+                          src={tradeForm.chartLink}
+                          title="Trade chart preview"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                    </div>
                   )}
                   <label>Comments<textarea rows={3} value={tradeForm.comments} onChange={(event) => setTradeForm((prev) => ({ ...prev, comments: event.target.value }))} /></label>
                   </fieldset>
