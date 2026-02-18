@@ -34,6 +34,8 @@ type MarketStructureBias = 'buy' | 'sell' | 'none';
 type Impact = 'high' | 'low';
 
 type MarketAnalysisPayload = {
+  dayId?: string;
+  analysisTime?: string;
   pair: string;
   tradingDate: string;
   sessionName: string;
@@ -777,6 +779,21 @@ export const handler = async (
     const existingCreatedAt = event.queryStringParameters?.createdAt;
     const existingId = event.queryStringParameters?.id;
     const isUpdate = Boolean(existingCreatedAt && existingId);
+
+    if (!isUpdate && payload.dayId) {
+      const allItems = await getAllUserItems(userSub);
+      const existingForDay = allItems.find(
+        (item) => item.itemType === 'MARKET_ANALYSIS' && String(item.dayId ?? '') === String(payload.dayId),
+      );
+      if (existingForDay) {
+        return json(409, {
+          message: 'Market analysis already exists for this trading day',
+          id: String(existingForDay.id ?? ''),
+          createdAt: String(existingForDay.createdAt ?? ''),
+        });
+      }
+    }
+
     const createdAt = existingCreatedAt ?? new Date().toISOString();
     const id = existingId ?? crypto.randomUUID();
 
@@ -1875,6 +1892,7 @@ export const handler = async (
   }
 
   if (routeKey.endsWith('GET /analysis')) {
+    const dayId = event.queryStringParameters?.dayId;
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
@@ -1892,8 +1910,12 @@ export const handler = async (
       }),
     );
 
+    const filtered = (result.Items ?? [])
+      .filter((item) => (dayId ? String(item.dayId ?? '') === dayId : true))
+      .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+
     return json(200, {
-      items: result.Items ?? [],
+      items: filtered,
     });
   }
 

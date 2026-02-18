@@ -92,52 +92,6 @@ type TradeLogFormState = {
   tradeDate: string;
   tradeTime: string;
   sessionName: string;
-  pair: string;
-  fundamentalsSentiment: 'bullish' | 'bearish' | 'consolidation';
-  movingAverages5m: 'bullish' | 'bearish' | 'consolidation';
-  patternsTrend5m: 'bullish' | 'bearish' | 'consolidation';
-  movingAverages1h: 'bullish' | 'bearish' | 'consolidation';
-  patternsTrend1h: 'bullish' | 'bearish' | 'consolidation';
-  relativeStrength5m: 'bullish' | 'bearish' | 'consolidation';
-  relativeStrength1h: 'bullish' | 'bearish' | 'consolidation';
-  candle1h: 'bullish' | 'bearish' | 'consolidation';
-  candle4h: 'bullish' | 'bearish' | 'consolidation';
-  candleDaily: 'bullish' | 'bearish' | 'consolidation';
-  candleWeekly: 'bullish' | 'bearish' | 'consolidation';
-  candleMonthly: 'bullish' | 'bearish' | 'consolidation';
-  analysisConclusion: AnalysisFormState['conclusion'];
-  prevDayLow: string;
-  prevDayHigh: string;
-  currentDayLow: string;
-  currentDayHigh: string;
-  currentTrend: AnalysisDirection;
-  directionalBias: AnalysisFormState['directionalBias'];
-  tradingStyle: AnalysisFormState['tradingStyle'];
-  futuresPrice: string;
-  priceActionNotes: string;
-  redFolderNews: boolean;
-  newsImpact: Impact;
-  newsTime: string;
-  newsNotes: string;
-  sellRsiLevel: string;
-  buyRsiLevel: string;
-  hasClearTrend: boolean;
-  tradingNotes: string;
-  sellZone1: string;
-  sellZone2: string;
-  sellZone3: string;
-  buyZone1: string;
-  buyZone2: string;
-  buyZone3: string;
-  reversalZone1: string;
-  reversalZone2: string;
-  swingZone1: string;
-  swingZone2: string;
-  marketStructure: Array<{
-    rangeName: string;
-    bias: MarketStructureBias;
-    level: string;
-  }>;
   tradingAsset: string;
   tradeSide: 'buy' | 'sell';
   strategy: string;
@@ -184,55 +138,17 @@ type TradingDayItem = {
   notes?: string;
 };
 
+type MarketAnalysisItem = AnalysisFormState & {
+  id: string;
+  createdAt: string;
+  dayId?: string;
+  analysisTime?: string;
+  analysisScore?: number;
+};
+
 type SessionTradeItem = TradeLogItem & {
   dayId: string;
   sessionId?: string;
-  pair?: string;
-  analysisConclusion?: AnalysisFormState['conclusion'];
-  fundamentalsSentiment?: 'bullish' | 'bearish' | 'consolidation';
-  movingAverages5m?: 'bullish' | 'bearish' | 'consolidation';
-  patternsTrend5m?: 'bullish' | 'bearish' | 'consolidation';
-  movingAverages1h?: 'bullish' | 'bearish' | 'consolidation';
-  patternsTrend1h?: 'bullish' | 'bearish' | 'consolidation';
-  relativeStrength5m?: 'bullish' | 'bearish' | 'consolidation';
-  relativeStrength1h?: 'bullish' | 'bearish' | 'consolidation';
-  candle1h?: 'bullish' | 'bearish' | 'consolidation';
-  candle4h?: 'bullish' | 'bearish' | 'consolidation';
-  candleDaily?: 'bullish' | 'bearish' | 'consolidation';
-  candleWeekly?: 'bullish' | 'bearish' | 'consolidation';
-  candleMonthly?: 'bullish' | 'bearish' | 'consolidation';
-  prevDayLow?: string;
-  prevDayHigh?: string;
-  currentDayLow?: string;
-  currentDayHigh?: string;
-  currentTrend?: AnalysisDirection;
-  directionalBias?: AnalysisFormState['directionalBias'];
-  tradingStyle?: AnalysisFormState['tradingStyle'];
-  futuresPrice?: string;
-  priceActionNotes?: string;
-  redFolderNews?: boolean;
-  newsImpact?: Impact;
-  newsTime?: string;
-  newsNotes?: string;
-  sellRsiLevel?: string;
-  buyRsiLevel?: string;
-  hasClearTrend?: boolean;
-  tradingNotes?: string;
-  sellZone1?: string;
-  sellZone2?: string;
-  sellZone3?: string;
-  buyZone1?: string;
-  buyZone2?: string;
-  buyZone3?: string;
-  reversalZone1?: string;
-  reversalZone2?: string;
-  swingZone1?: string;
-  swingZone2?: string;
-  marketStructure?: Array<{
-    rangeName: string;
-    bias: MarketStructureBias;
-    level: string;
-  }>;
 };
 
 type ConfluenceItem = {
@@ -292,7 +208,24 @@ const defaultTradeForm = (): TradeLogFormState => ({
   tradeDate: new Date().toISOString().slice(0, 10),
   tradeTime: new Date().toTimeString().slice(0, 5),
   sessionName: 'London Open',
+  tradingAsset: 'XAUUSD',
+  tradeSide: 'buy',
+  strategy: '',
+  confluences: [''],
+  entryPrice: '',
+  riskRewardRatio: '',
+  stopLossPrice: '',
+  takeProfitPrice: '',
+  exitPrice: '',
+  feelings: 'Not filled',
+  comments: '',
+  chartLink: '',
+});
+
+const defaultAnalysisForm = (): AnalysisFormState => ({
   pair: 'XAUUSD',
+  tradingDate: new Date().toISOString().slice(0, 10),
+  sessionName: 'London Open',
   fundamentalsSentiment: 'bullish',
   movingAverages5m: 'bullish',
   patternsTrend5m: 'bullish',
@@ -305,14 +238,11 @@ const defaultTradeForm = (): TradeLogFormState => ({
   candleDaily: 'bullish',
   candleWeekly: 'bullish',
   candleMonthly: 'bullish',
-  analysisConclusion: 'bullish',
+  conclusion: 'bullish',
   prevDayLow: '',
   prevDayHigh: '',
   currentDayLow: '',
   currentDayHigh: '',
-  currentTrend: 'bullish',
-  directionalBias: 'bullish',
-  tradingStyle: 'trend',
   futuresPrice: '',
   priceActionNotes: '',
   redFolderNews: false,
@@ -322,6 +252,9 @@ const defaultTradeForm = (): TradeLogFormState => ({
   sellRsiLevel: '',
   buyRsiLevel: '',
   hasClearTrend: true,
+  currentTrend: 'bullish',
+  directionalBias: 'bullish',
+  tradingStyle: 'trend',
   tradingNotes: '',
   sellZone1: '',
   sellZone2: '',
@@ -338,18 +271,6 @@ const defaultTradeForm = (): TradeLogFormState => ({
     bias: 'none',
     level: '',
   })),
-  tradingAsset: 'XAUUSD',
-  tradeSide: 'buy',
-  strategy: '',
-  confluences: [''],
-  entryPrice: '',
-  riskRewardRatio: '',
-  stopLossPrice: '',
-  takeProfitPrice: '',
-  exitPrice: '',
-  feelings: 'Not filled',
-  comments: '',
-  chartLink: '',
 });
 
 const defaultTradingDayForm = () => ({
@@ -552,12 +473,16 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [activeTab, setActiveTab] = useState<MenuTab>('checklist');
   const [checklistForm, setChecklistForm] = useState<FormState>(defaultChecklistForm);
   const [tradeForm, setTradeForm] = useState<TradeLogFormState>(defaultTradeForm);
+  const [analysisForm, setAnalysisForm] = useState<AnalysisFormState>(defaultAnalysisForm);
+  const [analysisTime, setAnalysisTime] = useState(new Date().toTimeString().slice(0, 5));
 
   const [checklistHistory, setChecklistHistory] = useState<ChecklistItem[]>([]);
   const [tradingDays, setTradingDays] = useState<TradingDayItem[]>([]);
   const [dayTrades, setDayTrades] = useState<SessionTradeItem[]>([]);
+  const [dayAnalyses, setDayAnalyses] = useState<MarketAnalysisItem[]>([]);
   const [selectedTradingDayId, setSelectedTradingDayId] = useState<string | null>(null);
   const [editingSessionTrade, setEditingSessionTrade] = useState<{ id: string; createdAt: string } | null>(null);
+  const [editingAnalysis, setEditingAnalysis] = useState<{ id: string; createdAt: string } | null>(null);
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [tradingDayDialogOpen, setTradingDayDialogOpen] = useState(false);
   const [tradingDayForm, setTradingDayForm] = useState(defaultTradingDayForm);
@@ -572,6 +497,10 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [isAdmin, setIsAdmin] = useState(false);
   const [editingConfluenceKey, setEditingConfluenceKey] = useState<string | null>(null);
   const [editingConfluenceValue, setEditingConfluenceValue] = useState('');
+  const [tradingDaySectionOpen, setTradingDaySectionOpen] = useState({
+    marketAnalysis: true,
+    trades: true,
+  });
   const [analysisSectionOpen, setAnalysisSectionOpen] = useState({
     preMarket: true,
     priceAction: true,
@@ -628,6 +557,10 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     () => tradingDays.find((item) => item.id === selectedTradingDayId) ?? null,
     [tradingDays, selectedTradingDayId],
   );
+  const activeDayAnalysis = useMemo(
+    () => dayAnalyses[0] ?? null,
+    [dayAnalyses],
+  );
   const tradingDayYears = useMemo(
     () => Array.from(new Set(tradingDays.map((item) => item.tradingDate.slice(0, 4)))).sort((a, b) => b.localeCompare(a)),
     [tradingDays],
@@ -679,6 +612,9 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const toggleAnalysisSection = (section: keyof typeof analysisSectionOpen) => {
     setAnalysisSectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
   };
+  const toggleTradingDaySection = (section: keyof typeof tradingDaySectionOpen) => {
+    setTradingDaySectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
 
   useEffect(() => {
     void (async () => {
@@ -695,15 +631,22 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   useEffect(() => {
     if (!selectedTradingDayId) {
       setDayTrades([]);
+      setDayAnalyses([]);
       return;
     }
 
     void (async () => {
       try {
-        const tradesRes = await apiCall<{ items: SessionTradeItem[] }>(`session-trades?dayId=${encodeURIComponent(selectedTradingDayId)}`);
+        const [tradesRes, analysisRes] = await Promise.all([
+          apiCall<{ items: SessionTradeItem[] }>(`session-trades?dayId=${encodeURIComponent(selectedTradingDayId)}`),
+          apiCall<{ items: MarketAnalysisItem[] }>(`analysis?dayId=${encodeURIComponent(selectedTradingDayId)}`),
+        ]);
         setDayTrades(tradesRes.items);
+        setDayAnalyses(
+          analysisRes.items.sort((a, b) => `${b.tradingDate}T${b.analysisTime ?? ''}`.localeCompare(`${a.tradingDate}T${a.analysisTime ?? ''}`)),
+        );
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load trading day trades');
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load trading day data');
       }
     })();
   }, [selectedTradingDayId]);
@@ -765,8 +708,14 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   };
 
   const refreshTradingDayTrades = async (dayId: string) => {
-    const tradesRes = await apiCall<{ items: SessionTradeItem[] }>(`session-trades?dayId=${encodeURIComponent(dayId)}`);
+    const [tradesRes, analysisRes] = await Promise.all([
+      apiCall<{ items: SessionTradeItem[] }>(`session-trades?dayId=${encodeURIComponent(dayId)}`),
+      apiCall<{ items: MarketAnalysisItem[] }>(`analysis?dayId=${encodeURIComponent(dayId)}`),
+    ]);
     setDayTrades(tradesRes.items);
+    setDayAnalyses(
+      analysisRes.items.sort((a, b) => `${b.tradingDate}T${b.analysisTime ?? ''}`.localeCompare(`${a.tradingDate}T${a.analysisTime ?? ''}`)),
+    );
   };
 
   const saveTradingDay = async (event: FormEvent) => {
@@ -820,57 +769,309 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     }
   };
 
+  useEffect(() => {
+    if (!selectedTradingDay) {
+      setEditingAnalysis(null);
+      setAnalysisForm(defaultAnalysisForm());
+      setAnalysisTime(new Date().toTimeString().slice(0, 5));
+      return;
+    }
+
+    if (activeDayAnalysis) {
+      setEditingAnalysis({ id: activeDayAnalysis.id, createdAt: activeDayAnalysis.createdAt });
+      setAnalysisForm({
+        pair: activeDayAnalysis.pair ?? 'XAUUSD',
+        tradingDate: activeDayAnalysis.tradingDate,
+        sessionName: activeDayAnalysis.sessionName ?? 'London Open',
+        fundamentalsSentiment: activeDayAnalysis.fundamentalsSentiment ?? 'bullish',
+        movingAverages5m: activeDayAnalysis.movingAverages5m ?? 'bullish',
+        patternsTrend5m: activeDayAnalysis.patternsTrend5m ?? 'bullish',
+        movingAverages1h: activeDayAnalysis.movingAverages1h ?? 'bullish',
+        patternsTrend1h: activeDayAnalysis.patternsTrend1h ?? 'bullish',
+        relativeStrength5m: activeDayAnalysis.relativeStrength5m ?? 'bullish',
+        relativeStrength1h: activeDayAnalysis.relativeStrength1h ?? 'bullish',
+        candle1h: activeDayAnalysis.candle1h ?? 'bullish',
+        candle4h: activeDayAnalysis.candle4h ?? 'bullish',
+        candleDaily: activeDayAnalysis.candleDaily ?? 'bullish',
+        candleWeekly: activeDayAnalysis.candleWeekly ?? 'bullish',
+        candleMonthly: activeDayAnalysis.candleMonthly ?? 'bullish',
+        conclusion: activeDayAnalysis.conclusion ?? 'bullish',
+        prevDayLow: activeDayAnalysis.prevDayLow ?? '',
+        prevDayHigh: activeDayAnalysis.prevDayHigh ?? '',
+        currentDayLow: activeDayAnalysis.currentDayLow ?? '',
+        currentDayHigh: activeDayAnalysis.currentDayHigh ?? '',
+        futuresPrice: activeDayAnalysis.futuresPrice ?? '',
+        priceActionNotes: activeDayAnalysis.priceActionNotes ?? '',
+        redFolderNews: activeDayAnalysis.redFolderNews ?? false,
+        newsImpact: activeDayAnalysis.newsImpact ?? 'high',
+        newsTime: activeDayAnalysis.newsTime ?? '',
+        newsNotes: activeDayAnalysis.newsNotes ?? '',
+        sellRsiLevel: activeDayAnalysis.sellRsiLevel ?? '',
+        buyRsiLevel: activeDayAnalysis.buyRsiLevel ?? '',
+        hasClearTrend: activeDayAnalysis.hasClearTrend ?? true,
+        currentTrend: activeDayAnalysis.currentTrend ?? 'bullish',
+        directionalBias: activeDayAnalysis.directionalBias ?? 'bullish',
+        tradingStyle: activeDayAnalysis.tradingStyle ?? 'trend',
+        tradingNotes: activeDayAnalysis.tradingNotes ?? '',
+        sellZone1: activeDayAnalysis.sellZone1 ?? '',
+        sellZone2: activeDayAnalysis.sellZone2 ?? '',
+        sellZone3: activeDayAnalysis.sellZone3 ?? '',
+        buyZone1: activeDayAnalysis.buyZone1 ?? '',
+        buyZone2: activeDayAnalysis.buyZone2 ?? '',
+        buyZone3: activeDayAnalysis.buyZone3 ?? '',
+        reversalZone1: activeDayAnalysis.reversalZone1 ?? '',
+        reversalZone2: activeDayAnalysis.reversalZone2 ?? '',
+        swingZone1: activeDayAnalysis.swingZone1 ?? '',
+        swingZone2: activeDayAnalysis.swingZone2 ?? '',
+        marketStructure: activeDayAnalysis.marketStructure && activeDayAnalysis.marketStructure.length > 0
+          ? activeDayAnalysis.marketStructure
+          : defaultAnalysisForm().marketStructure,
+      });
+      setAnalysisTime(activeDayAnalysis.analysisTime ?? '');
+      return;
+    }
+
+    setEditingAnalysis(null);
+    setAnalysisForm({
+      ...defaultAnalysisForm(),
+      tradingDate: selectedTradingDay.tradingDate,
+    });
+    setAnalysisTime(new Date().toTimeString().slice(0, 5));
+  }, [activeDayAnalysis, selectedTradingDay]);
+
+  const saveAnalysis = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedTradingDayId) {
+      setError('Select a trading day first');
+      return;
+    }
+
+    const payload = {
+      ...analysisForm,
+      dayId: selectedTradingDayId,
+      analysisTime,
+    };
+
+    setBusy(true);
+    setError(null);
+    try {
+      if (editingAnalysis) {
+        await apiCall<MarketAnalysisItem>(`analysis?createdAt=${encodeURIComponent(editingAnalysis.createdAt)}&id=${encodeURIComponent(editingAnalysis.id)}`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiCall<MarketAnalysisItem>('analysis', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+      await refreshTradingDayTrades(selectedTradingDayId);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save market analysis');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteAnalysis = async () => {
+    if (!editingAnalysis) {
+      return;
+    }
+    const confirmed = window.confirm('Delete this market analysis?');
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await apiCall<{ deleted: boolean }>(`analysis?createdAt=${encodeURIComponent(editingAnalysis.createdAt)}&id=${encodeURIComponent(editingAnalysis.id)}`, {
+        method: 'DELETE',
+      });
+      if (selectedTradingDayId) {
+        await refreshTradingDayTrades(selectedTradingDayId);
+      }
+      setEditingAnalysis(null);
+      setAnalysisForm({
+        ...defaultAnalysisForm(),
+        tradingDate: selectedTradingDay?.tradingDate ?? defaultAnalysisForm().tradingDate,
+      });
+      setAnalysisTime(new Date().toTimeString().slice(0, 5));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete market analysis');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const renderMarketAnalysisForm = () => (
+    <form className="market-form" onSubmit={saveAnalysis}>
+      <fieldset>
+        <legend>Market Analysis</legend>
+        <div className="grid-4">
+          <label>Pair<input value={analysisForm.pair} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, pair: event.target.value }))} /></label>
+          <label>Date<input type="date" value={analysisForm.tradingDate} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingDate: event.target.value }))} required /></label>
+          <label>Time<input type="time" value={analysisTime} onChange={(event) => setAnalysisTime(event.target.value)} required /></label>
+          <label>Session<select value={analysisForm.sessionName} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
+        </div>
+        <div className="analysis-pdf-stack">
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header">
+              <h4>Pre-Market Checklist</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('preMarket')} aria-label={analysisSectionOpen.preMarket ? 'Collapse pre-market checklist' : 'Expand pre-market checklist'} title={analysisSectionOpen.preMarket ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.preMarket ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.preMarket && (
+              <>
+                <div className="analysis-choice-grid">
+                  {preMarketChecklistFields.map((field) => (
+                    <div key={field.key} className="analysis-choice-row">
+                      <span>{field.label}</span>
+                      <div className="choice-box-group">
+                        {directionOptions.map((option) => (
+                          <label key={`${field.key}-${option.value}`} className="choice-box">
+                            <input type="radio" name={`analysis-${field.key}`} checked={analysisForm[field.key] === option.value} onChange={() => setAnalysisForm((prev) => ({ ...prev, [field.key]: option.value }))} />
+                            <span>{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <label>Conclusion
+                  <select value={analysisForm.conclusion} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, conclusion: event.target.value as AnalysisFormState['conclusion'] }))}>
+                    <option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="bearishConsolidation">Bearish Consolidation</option><option value="bullishConsolidation">Bullish Consolidation</option>
+                  </select>
+                </label>
+              </>
+            )}
+          </section>
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header">
+              <h4>Price Action</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('priceAction')} aria-label={analysisSectionOpen.priceAction ? 'Collapse price action' : 'Expand price action'} title={analysisSectionOpen.priceAction ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.priceAction ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.priceAction && (
+              <>
+                <div className="grid-3">
+                  <label>Prev day low<input value={analysisForm.prevDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayLow: event.target.value }))} /></label>
+                  <label>Prev day high<input value={analysisForm.prevDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayHigh: event.target.value }))} /></label>
+                  <label>Futures price<input value={analysisForm.futuresPrice} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, futuresPrice: event.target.value }))} /></label>
+                  <label>Current day low<input value={analysisForm.currentDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayLow: event.target.value }))} /></label>
+                  <label>Current day high<input value={analysisForm.currentDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayHigh: event.target.value }))} /></label>
+                </div>
+                <label>Price action notes<textarea rows={2} value={analysisForm.priceActionNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, priceActionNotes: event.target.value }))} /></label>
+              </>
+            )}
+          </section>
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header">
+              <h4>News Notes (GMT+2)</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('newsNotes')} aria-label={analysisSectionOpen.newsNotes ? 'Collapse news notes' : 'Expand news notes'} title={analysisSectionOpen.newsNotes ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.newsNotes ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.newsNotes && (
+              <>
+                <div className="grid-3">
+                  <div className="radio-inline"><span>Red folder news</span><label><input type="radio" name="analysisRedFolderNews" checked={analysisForm.redFolderNews} onChange={() => setAnalysisForm((prev) => ({ ...prev, redFolderNews: true }))} /> Yes</label><label><input type="radio" name="analysisRedFolderNews" checked={!analysisForm.redFolderNews} onChange={() => setAnalysisForm((prev) => ({ ...prev, redFolderNews: false }))} /> No</label></div>
+                  <div className="radio-inline"><span>Impact</span><label><input type="radio" name="analysisNewsImpact" checked={analysisForm.newsImpact === 'high'} onChange={() => setAnalysisForm((prev) => ({ ...prev, newsImpact: 'high' }))} /> High</label><label><input type="radio" name="analysisNewsImpact" checked={analysisForm.newsImpact === 'low'} onChange={() => setAnalysisForm((prev) => ({ ...prev, newsImpact: 'low' }))} /> Low</label></div>
+                  <label>News time<input value={analysisForm.newsTime} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsTime: event.target.value }))} /></label>
+                </div>
+                <label>News notes<textarea rows={2} value={analysisForm.newsNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsNotes: event.target.value }))} /></label>
+              </>
+            )}
+          </section>
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header">
+              <h4>Pull Back Trading Levels</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('pullBackLevels')} aria-label={analysisSectionOpen.pullBackLevels ? 'Collapse pull back levels' : 'Expand pull back levels'} title={analysisSectionOpen.pullBackLevels ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.pullBackLevels ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.pullBackLevels && <div className="grid-3"><label>Sell RSI level (overbought)<input value={analysisForm.sellRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellRsiLevel: event.target.value }))} /></label><label>Buy RSI level (oversold)<input value={analysisForm.buyRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyRsiLevel: event.target.value }))} /></label></div>}
+          </section>
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header">
+              <h4>Trading Notes</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('tradingNotes')} aria-label={analysisSectionOpen.tradingNotes ? 'Collapse trading notes' : 'Expand trading notes'} title={analysisSectionOpen.tradingNotes ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.tradingNotes ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.tradingNotes && (
+              <>
+                <div className="grid-3">
+                  <div className="radio-inline"><span>Has a clear trend</span><label><input type="radio" name="analysisHasTrend" checked={analysisForm.hasClearTrend} onChange={() => setAnalysisForm((prev) => ({ ...prev, hasClearTrend: true }))} /> Yes</label><label><input type="radio" name="analysisHasTrend" checked={!analysisForm.hasClearTrend} onChange={() => setAnalysisForm((prev) => ({ ...prev, hasClearTrend: false }))} /> No</label></div>
+                  <label>Current trend<select value={analysisForm.currentTrend} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentTrend: event.target.value as AnalysisFormState['currentTrend'] }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="none">None</option></select></label>
+                  <label>Directional bias<select value={analysisForm.directionalBias} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, directionalBias: event.target.value as AnalysisFormState['directionalBias'] }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="none">None</option></select></label>
+                  <label>Trading style<select value={analysisForm.tradingStyle} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingStyle: event.target.value as AnalysisFormState['tradingStyle'] }))}><option value="trend">Trend</option><option value="consolidation">Consolidation</option></select></label>
+                </div>
+                <label>Trading notes<textarea rows={2} value={analysisForm.tradingNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingNotes: event.target.value }))} /></label>
+              </>
+            )}
+          </section>
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header">
+              <h4>Potential Zones</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('potentialZones')} aria-label={analysisSectionOpen.potentialZones ? 'Collapse potential zones' : 'Expand potential zones'} title={analysisSectionOpen.potentialZones ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.potentialZones ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.potentialZones && (
+              <>
+                <div className="grid-3"><label>Potential sell zone 1<input value={analysisForm.sellZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone1: event.target.value }))} /></label><label>Potential sell zone 2<input value={analysisForm.sellZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone2: event.target.value }))} /></label><label>Potential sell zone 3<input value={analysisForm.sellZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellZone3: event.target.value }))} /></label></div>
+                <div className="grid-3"><label>Potential buy zone 1<input value={analysisForm.buyZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone1: event.target.value }))} /></label><label>Potential buy zone 2<input value={analysisForm.buyZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone2: event.target.value }))} /></label><label>Potential buy zone 3<input value={analysisForm.buyZone3} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyZone3: event.target.value }))} /></label></div>
+                <div className="grid-3"><label>Potential reversal zone 1<input value={analysisForm.reversalZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone1: event.target.value }))} /></label><label>Potential reversal zone 2<input value={analysisForm.reversalZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, reversalZone2: event.target.value }))} /></label></div>
+                <div className="grid-3"><label>Potential swing zone 1<input value={analysisForm.swingZone1} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone1: event.target.value }))} /></label><label>Potential swing zone 2<input value={analysisForm.swingZone2} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, swingZone2: event.target.value }))} /></label></div>
+              </>
+            )}
+          </section>
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header">
+              <h4>Market Structure</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('marketStructure')} aria-label={analysisSectionOpen.marketStructure ? 'Collapse market structure' : 'Expand market structure'} title={analysisSectionOpen.marketStructure ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.marketStructure ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.marketStructure && (
+              <div className="market-structure-grid">
+                {analysisForm.marketStructure.map((row, index) => (
+                  <div key={`${row.rangeName}-${index}`} className="market-structure-row">
+                    <span>{row.rangeName}</span>
+                    <div className="radio-inline compact">
+                      <label><input type="radio" name={`analysis-market-structure-${index}`} checked={row.bias === 'buy'} onChange={() => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, bias: 'buy' } : entry)) }))} /> Buy</label>
+                      <label><input type="radio" name={`analysis-market-structure-${index}`} checked={row.bias === 'sell'} onChange={() => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, bias: 'sell' } : entry)) }))} /> Sell</label>
+                      <label><input type="radio" name={`analysis-market-structure-${index}`} checked={row.bias === 'none'} onChange={() => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, bias: 'none' } : entry)) }))} /> None</label>
+                    </div>
+                    <input placeholder="Level" value={row.level} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, level: event.target.value } : entry)) }))} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </fieldset>
+      <div className="form-footer">
+        <span />
+        <div className="inline-actions">
+          {editingAnalysis && <button type="button" className="ghost" onClick={deleteAnalysis}>Delete</button>}
+          <button type="submit" disabled={busy}>{editingAnalysis ? 'Update Analysis' : 'Save Analysis'}</button>
+        </div>
+      </div>
+    </form>
+  );
+
   const openTradeDialog = (item?: SessionTradeItem) => {
     if (item) {
-      const defaultForm = defaultTradeForm();
       setEditingSessionTrade({ id: item.id, createdAt: item.createdAt });
       setTradeForm({
-        ...defaultForm,
         tradeDate: item.tradeDate,
         tradeTime: item.tradeTime ?? '',
-        sessionName: item.sessionName ?? '',
-        pair: item.pair ?? 'XAUUSD',
-        fundamentalsSentiment: item.fundamentalsSentiment ?? defaultForm.fundamentalsSentiment,
-        movingAverages5m: item.movingAverages5m ?? defaultForm.movingAverages5m,
-        patternsTrend5m: item.patternsTrend5m ?? defaultForm.patternsTrend5m,
-        movingAverages1h: item.movingAverages1h ?? defaultForm.movingAverages1h,
-        patternsTrend1h: item.patternsTrend1h ?? defaultForm.patternsTrend1h,
-        relativeStrength5m: item.relativeStrength5m ?? defaultForm.relativeStrength5m,
-        relativeStrength1h: item.relativeStrength1h ?? defaultForm.relativeStrength1h,
-        candle1h: item.candle1h ?? defaultForm.candle1h,
-        candle4h: item.candle4h ?? defaultForm.candle4h,
-        candleDaily: item.candleDaily ?? defaultForm.candleDaily,
-        candleWeekly: item.candleWeekly ?? defaultForm.candleWeekly,
-        candleMonthly: item.candleMonthly ?? defaultForm.candleMonthly,
-        analysisConclusion: item.analysisConclusion ?? 'bullish',
-        prevDayLow: item.prevDayLow ?? '',
-        prevDayHigh: item.prevDayHigh ?? '',
-        currentDayLow: item.currentDayLow ?? '',
-        currentDayHigh: item.currentDayHigh ?? '',
-        currentTrend: item.currentTrend ?? 'bullish',
-        directionalBias: item.directionalBias ?? 'bullish',
-        tradingStyle: item.tradingStyle ?? 'trend',
-        futuresPrice: item.futuresPrice ?? '',
-        priceActionNotes: item.priceActionNotes ?? '',
-        redFolderNews: item.redFolderNews ?? false,
-        newsImpact: item.newsImpact ?? 'high',
-        newsTime: item.newsTime ?? '',
-        newsNotes: item.newsNotes ?? '',
-        sellRsiLevel: item.sellRsiLevel ?? '',
-        buyRsiLevel: item.buyRsiLevel ?? '',
-        hasClearTrend: item.hasClearTrend ?? true,
-        tradingNotes: item.tradingNotes ?? '',
-        sellZone1: item.sellZone1 ?? '',
-        sellZone2: item.sellZone2 ?? '',
-        sellZone3: item.sellZone3 ?? '',
-        buyZone1: item.buyZone1 ?? '',
-        buyZone2: item.buyZone2 ?? '',
-        buyZone3: item.buyZone3 ?? '',
-        reversalZone1: item.reversalZone1 ?? '',
-        reversalZone2: item.reversalZone2 ?? '',
-        swingZone1: item.swingZone1 ?? '',
-        swingZone2: item.swingZone2 ?? '',
-        marketStructure: item.marketStructure && item.marketStructure.length > 0 ? item.marketStructure : defaultForm.marketStructure,
+        sessionName: item.sessionName ?? 'London Open',
         tradingAsset: item.tradingAsset,
         tradeSide: item.tradeSide ?? 'buy',
         strategy: item.strategy,
@@ -913,48 +1114,6 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       tradeDate: tradeForm.tradeDate,
       tradeTime: tradeForm.tradeTime,
       sessionName: tradeForm.sessionName,
-      pair: tradeForm.pair,
-      fundamentalsSentiment: tradeForm.fundamentalsSentiment,
-      movingAverages5m: tradeForm.movingAverages5m,
-      patternsTrend5m: tradeForm.patternsTrend5m,
-      movingAverages1h: tradeForm.movingAverages1h,
-      patternsTrend1h: tradeForm.patternsTrend1h,
-      relativeStrength5m: tradeForm.relativeStrength5m,
-      relativeStrength1h: tradeForm.relativeStrength1h,
-      candle1h: tradeForm.candle1h,
-      candle4h: tradeForm.candle4h,
-      candleDaily: tradeForm.candleDaily,
-      candleWeekly: tradeForm.candleWeekly,
-      candleMonthly: tradeForm.candleMonthly,
-      analysisConclusion: tradeForm.analysisConclusion,
-      prevDayLow: tradeForm.prevDayLow,
-      prevDayHigh: tradeForm.prevDayHigh,
-      currentDayLow: tradeForm.currentDayLow,
-      currentDayHigh: tradeForm.currentDayHigh,
-      currentTrend: tradeForm.currentTrend,
-      directionalBias: tradeForm.directionalBias,
-      tradingStyle: tradeForm.tradingStyle,
-      futuresPrice: tradeForm.futuresPrice,
-      priceActionNotes: tradeForm.priceActionNotes,
-      redFolderNews: tradeForm.redFolderNews,
-      newsImpact: tradeForm.newsImpact,
-      newsTime: tradeForm.newsTime,
-      newsNotes: tradeForm.newsNotes,
-      sellRsiLevel: tradeForm.sellRsiLevel,
-      buyRsiLevel: tradeForm.buyRsiLevel,
-      hasClearTrend: tradeForm.hasClearTrend,
-      tradingNotes: tradeForm.tradingNotes,
-      sellZone1: tradeForm.sellZone1,
-      sellZone2: tradeForm.sellZone2,
-      sellZone3: tradeForm.sellZone3,
-      buyZone1: tradeForm.buyZone1,
-      buyZone2: tradeForm.buyZone2,
-      buyZone3: tradeForm.buyZone3,
-      reversalZone1: tradeForm.reversalZone1,
-      reversalZone2: tradeForm.reversalZone2,
-      swingZone1: tradeForm.swingZone1,
-      swingZone2: tradeForm.swingZone2,
-      marketStructure: tradeForm.marketStructure,
       tradingAsset: tradeForm.tradingAsset,
       tradeSide: tradeForm.tradeSide,
       strategy: tradeForm.strategy,
@@ -1486,32 +1645,68 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
 
               <article className="confluence-manage-card">
                 <div className="panel-header">
+                  <h3>Market Analysis</h3>
+                  <div className="inline-actions">
+                    <span>{editingAnalysis ? 'Captured for this day' : 'Not captured yet'}</span>
+                    <button
+                      type="button"
+                      className="icon-button collapse-icon-button"
+                      onClick={() => toggleTradingDaySection('marketAnalysis')}
+                      aria-label={tradingDaySectionOpen.marketAnalysis ? 'Collapse market analysis' : 'Expand market analysis'}
+                      title={tradingDaySectionOpen.marketAnalysis ? 'Collapse' : 'Expand'}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                        {tradingDaySectionOpen.marketAnalysis ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                {tradingDaySectionOpen.marketAnalysis && renderMarketAnalysisForm()}
+              </article>
+
+              <article className="confluence-manage-card">
+                <div className="panel-header">
                   <h3>Trades</h3>
-                  <button type="button" className="icon-button add-icon-button" onClick={() => openTradeDialog()} title="Add trade" aria-label="Add trade">
-                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M11 5h2v14h-2zM5 11h14v2H5z" fill="currentColor" /></svg>
-                  </button>
+                  <div className="inline-actions">
+                    <button type="button" className="icon-button add-icon-button" onClick={() => openTradeDialog()} title="Add trade" aria-label="Add trade">
+                      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M11 5h2v14h-2zM5 11h14v2H5z" fill="currentColor" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-button collapse-icon-button"
+                      onClick={() => toggleTradingDaySection('trades')}
+                      aria-label={tradingDaySectionOpen.trades ? 'Collapse trades' : 'Expand trades'}
+                      title={tradingDaySectionOpen.trades ? 'Collapse' : 'Expand'}
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                        {tradingDaySectionOpen.trades ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="history-table-wrapper">
-                  <table className="history-table">
-                    <thead><tr><th>Date</th><th>Time</th><th>Pair</th><th>Asset</th><th>Side</th><th>Conclusion</th><th>Profit</th><th>Chart</th><th /></tr></thead>
-                    <tbody>
-                      {dayTrades.map((trade) => (
-                        <tr key={trade.id}>
-                          <td>{trade.tradeDate}</td>
-                          <td>{trade.tradeTime ?? '-'}</td>
-                          <td>{trade.pair ?? '-'}</td>
-                          <td>{trade.tradingAsset}</td>
-                          <td>{trade.tradeSide ?? '-'}</td>
-                          <td>{trade.analysisConclusion ?? '-'}</td>
-                          <td>{trade.totalProfit ?? '-'}</td>
-                          <td>{trade.chartLink ? <a href={trade.chartLink} target="_blank" rel="noreferrer">Open link</a> : '-'}</td>
-                          <td><button type="button" className="ghost" onClick={() => openTradeDialog(trade)}>View / Edit</button></td>
-                        </tr>
-                      ))}
-                      {dayTrades.length === 0 && <tr><td colSpan={9}>No trades yet for this day.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
+                {tradingDaySectionOpen.trades && (
+                  <div className="history-table-wrapper">
+                    <table className="history-table">
+                      <thead><tr><th>Date</th><th>Time</th><th>Session</th><th>Asset</th><th>Side</th><th>Strategy</th><th>Profit</th><th>Chart</th><th /></tr></thead>
+                      <tbody>
+                        {dayTrades.map((trade) => (
+                          <tr key={trade.id}>
+                            <td>{trade.tradeDate}</td>
+                            <td>{trade.tradeTime ?? '-'}</td>
+                            <td>{trade.sessionName ?? '-'}</td>
+                            <td>{trade.tradingAsset}</td>
+                            <td>{trade.tradeSide ?? '-'}</td>
+                            <td>{trade.strategy ?? '-'}</td>
+                            <td>{trade.totalProfit ?? '-'}</td>
+                            <td>{trade.chartLink ? <a href={trade.chartLink} target="_blank" rel="noreferrer">Open link</a> : '-'}</td>
+                            <td><button type="button" className="ghost" onClick={() => openTradeDialog(trade)}>View / Edit</button></td>
+                          </tr>
+                        ))}
+                        {dayTrades.length === 0 && <tr><td colSpan={9}>No trades yet for this day.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </article>
             </section>
           )}
@@ -1526,326 +1721,11 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 </div>
                 <form className="market-form" onSubmit={saveSessionTrade}>
                   <fieldset>
-                    <legend>Market Analysis</legend>
-                    <div className="grid-3">
-                      <label>Pair<input value={tradeForm.pair} onChange={(event) => setTradeForm((prev) => ({ ...prev, pair: event.target.value }))} /></label>
-                      <label>Date<input type="date" value={tradeForm.tradeDate} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeDate: event.target.value }))} /></label>
-                      <label>Session<select value={tradeForm.sessionName} onChange={(event) => setTradeForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
-                    </div>
-                    <div className="analysis-pdf-stack">
-                      <section className="analysis-pdf-section">
-                        <div className="collapsible-header">
-                          <h4>Pre-Market Checklist</h4>
-                          <button
-                            type="button"
-                            className="icon-button collapse-icon-button"
-                            onClick={() => toggleAnalysisSection('preMarket')}
-                            aria-label={analysisSectionOpen.preMarket ? 'Collapse pre-market checklist' : 'Expand pre-market checklist'}
-                            title={analysisSectionOpen.preMarket ? 'Collapse' : 'Expand'}
-                          >
-                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                              {analysisSectionOpen.preMarket ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
-                            </svg>
-                          </button>
-                        </div>
-                        {analysisSectionOpen.preMarket && (
-                          <>
-                            <div className="analysis-choice-grid">
-                              {preMarketChecklistFields.map((field) => (
-                                <div key={field.key} className="analysis-choice-row">
-                                  <span>{field.label}</span>
-                                  <div className="choice-box-group">
-                                    {directionOptions.map((option) => (
-                                      <label key={`${field.key}-${option.value}`} className="choice-box">
-                                        <input
-                                          type="radio"
-                                          name={`trade-${field.key}`}
-                                          checked={tradeForm[field.key] === option.value}
-                                          onChange={() => setTradeForm((prev) => ({ ...prev, [field.key]: option.value }))}
-                                        />
-                                        <span>{option.label}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <label>Conclusion
-                              <select value={tradeForm.analysisConclusion} onChange={(event) => setTradeForm((prev) => ({ ...prev, analysisConclusion: event.target.value as TradeLogFormState['analysisConclusion'] }))}>
-                                <option value="bullish">Bullish</option>
-                                <option value="bearish">Bearish</option>
-                                <option value="consolidation">Consolidation</option>
-                                <option value="bearishConsolidation">Bearish Consolidation</option>
-                                <option value="bullishConsolidation">Bullish Consolidation</option>
-                              </select>
-                            </label>
-                          </>
-                        )}
-                      </section>
-
-                      <section className="analysis-pdf-section">
-                        <div className="collapsible-header">
-                          <h4>Price Action</h4>
-                          <button
-                            type="button"
-                            className="icon-button collapse-icon-button"
-                            onClick={() => toggleAnalysisSection('priceAction')}
-                            aria-label={analysisSectionOpen.priceAction ? 'Collapse price action' : 'Expand price action'}
-                            title={analysisSectionOpen.priceAction ? 'Collapse' : 'Expand'}
-                          >
-                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                              {analysisSectionOpen.priceAction ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
-                            </svg>
-                          </button>
-                        </div>
-                        {analysisSectionOpen.priceAction && (
-                          <>
-                            <div className="grid-3">
-                              <label>Prev day low<input value={tradeForm.prevDayLow} onChange={(event) => setTradeForm((prev) => ({ ...prev, prevDayLow: event.target.value }))} /></label>
-                              <label>Prev day high<input value={tradeForm.prevDayHigh} onChange={(event) => setTradeForm((prev) => ({ ...prev, prevDayHigh: event.target.value }))} /></label>
-                              <label>Futures price<input value={tradeForm.futuresPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, futuresPrice: event.target.value }))} /></label>
-                              <label>Current day low<input value={tradeForm.currentDayLow} onChange={(event) => setTradeForm((prev) => ({ ...prev, currentDayLow: event.target.value }))} /></label>
-                              <label>Current day high<input value={tradeForm.currentDayHigh} onChange={(event) => setTradeForm((prev) => ({ ...prev, currentDayHigh: event.target.value }))} /></label>
-                            </div>
-                            <label>Price action notes<textarea rows={2} value={tradeForm.priceActionNotes} onChange={(event) => setTradeForm((prev) => ({ ...prev, priceActionNotes: event.target.value }))} /></label>
-                          </>
-                        )}
-                      </section>
-
-                      <section className="analysis-pdf-section">
-                        <div className="collapsible-header">
-                          <h4>News Notes (GMT+2)</h4>
-                          <button
-                            type="button"
-                            className="icon-button collapse-icon-button"
-                            onClick={() => toggleAnalysisSection('newsNotes')}
-                            aria-label={analysisSectionOpen.newsNotes ? 'Collapse news notes' : 'Expand news notes'}
-                            title={analysisSectionOpen.newsNotes ? 'Collapse' : 'Expand'}
-                          >
-                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                              {analysisSectionOpen.newsNotes ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
-                            </svg>
-                          </button>
-                        </div>
-                        {analysisSectionOpen.newsNotes && (
-                          <>
-                            <div className="grid-3">
-                              <div className="radio-inline">
-                                <span>Red folder news</span>
-                                <label><input type="radio" name="redFolderNews" checked={tradeForm.redFolderNews} onChange={() => setTradeForm((prev) => ({ ...prev, redFolderNews: true }))} /> Yes</label>
-                                <label><input type="radio" name="redFolderNews" checked={!tradeForm.redFolderNews} onChange={() => setTradeForm((prev) => ({ ...prev, redFolderNews: false }))} /> No</label>
-                              </div>
-                              <div className="radio-inline">
-                                <span>Impact</span>
-                                <label><input type="radio" name="newsImpact" checked={tradeForm.newsImpact === 'high'} onChange={() => setTradeForm((prev) => ({ ...prev, newsImpact: 'high' }))} /> High</label>
-                                <label><input type="radio" name="newsImpact" checked={tradeForm.newsImpact === 'low'} onChange={() => setTradeForm((prev) => ({ ...prev, newsImpact: 'low' }))} /> Low</label>
-                              </div>
-                              <label>News time<input value={tradeForm.newsTime} onChange={(event) => setTradeForm((prev) => ({ ...prev, newsTime: event.target.value }))} /></label>
-                            </div>
-                            <label>News notes<textarea rows={2} value={tradeForm.newsNotes} onChange={(event) => setTradeForm((prev) => ({ ...prev, newsNotes: event.target.value }))} /></label>
-                          </>
-                        )}
-                      </section>
-
-                      <section className="analysis-pdf-section">
-                        <div className="collapsible-header">
-                          <h4>Pull Back Trading Levels</h4>
-                          <button
-                            type="button"
-                            className="icon-button collapse-icon-button"
-                            onClick={() => toggleAnalysisSection('pullBackLevels')}
-                            aria-label={analysisSectionOpen.pullBackLevels ? 'Collapse pull back levels' : 'Expand pull back levels'}
-                            title={analysisSectionOpen.pullBackLevels ? 'Collapse' : 'Expand'}
-                          >
-                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                              {analysisSectionOpen.pullBackLevels ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
-                            </svg>
-                          </button>
-                        </div>
-                        {analysisSectionOpen.pullBackLevels && (
-                          <div className="grid-3">
-                            <label>Sell RSI level (overbought)<input value={tradeForm.sellRsiLevel} onChange={(event) => setTradeForm((prev) => ({ ...prev, sellRsiLevel: event.target.value }))} /></label>
-                            <label>Buy RSI level (oversold)<input value={tradeForm.buyRsiLevel} onChange={(event) => setTradeForm((prev) => ({ ...prev, buyRsiLevel: event.target.value }))} /></label>
-                          </div>
-                        )}
-                      </section>
-
-                      <section className="analysis-pdf-section">
-                        <div className="collapsible-header">
-                          <h4>Trading Notes</h4>
-                          <button
-                            type="button"
-                            className="icon-button collapse-icon-button"
-                            onClick={() => toggleAnalysisSection('tradingNotes')}
-                            aria-label={analysisSectionOpen.tradingNotes ? 'Collapse trading notes' : 'Expand trading notes'}
-                            title={analysisSectionOpen.tradingNotes ? 'Collapse' : 'Expand'}
-                          >
-                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                              {analysisSectionOpen.tradingNotes ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
-                            </svg>
-                          </button>
-                        </div>
-                        {analysisSectionOpen.tradingNotes && (
-                          <>
-                            <div className="grid-3">
-                              <div className="radio-inline">
-                                <span>Has a clear trend</span>
-                                <label><input type="radio" name="hasClearTrend" checked={tradeForm.hasClearTrend} onChange={() => setTradeForm((prev) => ({ ...prev, hasClearTrend: true }))} /> Yes</label>
-                                <label><input type="radio" name="hasClearTrend" checked={!tradeForm.hasClearTrend} onChange={() => setTradeForm((prev) => ({ ...prev, hasClearTrend: false }))} /> No</label>
-                              </div>
-                              <label>Current trend
-                                <select value={tradeForm.currentTrend} onChange={(event) => setTradeForm((prev) => ({ ...prev, currentTrend: event.target.value as TradeLogFormState['currentTrend'] }))}>
-                                  <option value="bullish">Bullish</option>
-                                  <option value="bearish">Bearish</option>
-                                  <option value="consolidation">Consolidation</option>
-                                  <option value="none">None</option>
-                                </select>
-                              </label>
-                              <label>Directional bias
-                                <select value={tradeForm.directionalBias} onChange={(event) => setTradeForm((prev) => ({ ...prev, directionalBias: event.target.value as TradeLogFormState['directionalBias'] }))}>
-                                  <option value="bullish">Bullish</option>
-                                  <option value="bearish">Bearish</option>
-                                  <option value="none">None</option>
-                                </select>
-                              </label>
-                              <label>Trading style
-                                <select value={tradeForm.tradingStyle} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradingStyle: event.target.value as TradeLogFormState['tradingStyle'] }))}>
-                                  <option value="trend">Trend</option>
-                                  <option value="consolidation">Consolidation</option>
-                                </select>
-                              </label>
-                            </div>
-                            <label>Trading notes<textarea rows={2} value={tradeForm.tradingNotes} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradingNotes: event.target.value }))} /></label>
-                          </>
-                        )}
-                      </section>
-
-                      <section className="analysis-pdf-section">
-                        <div className="collapsible-header">
-                          <h4>Potential Zones</h4>
-                          <button
-                            type="button"
-                            className="icon-button collapse-icon-button"
-                            onClick={() => toggleAnalysisSection('potentialZones')}
-                            aria-label={analysisSectionOpen.potentialZones ? 'Collapse potential zones' : 'Expand potential zones'}
-                            title={analysisSectionOpen.potentialZones ? 'Collapse' : 'Expand'}
-                          >
-                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                              {analysisSectionOpen.potentialZones ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
-                            </svg>
-                          </button>
-                        </div>
-                        {analysisSectionOpen.potentialZones && (
-                          <>
-                            <div className="grid-3">
-                              <label>Potential sell zone 1<input value={tradeForm.sellZone1} onChange={(event) => setTradeForm((prev) => ({ ...prev, sellZone1: event.target.value }))} /></label>
-                              <label>Potential sell zone 2<input value={tradeForm.sellZone2} onChange={(event) => setTradeForm((prev) => ({ ...prev, sellZone2: event.target.value }))} /></label>
-                              <label>Potential sell zone 3<input value={tradeForm.sellZone3} onChange={(event) => setTradeForm((prev) => ({ ...prev, sellZone3: event.target.value }))} /></label>
-                            </div>
-                            <div className="grid-3">
-                              <label>Potential buy zone 1<input value={tradeForm.buyZone1} onChange={(event) => setTradeForm((prev) => ({ ...prev, buyZone1: event.target.value }))} /></label>
-                              <label>Potential buy zone 2<input value={tradeForm.buyZone2} onChange={(event) => setTradeForm((prev) => ({ ...prev, buyZone2: event.target.value }))} /></label>
-                              <label>Potential buy zone 3<input value={tradeForm.buyZone3} onChange={(event) => setTradeForm((prev) => ({ ...prev, buyZone3: event.target.value }))} /></label>
-                            </div>
-                            <div className="grid-3">
-                              <label>Potential reversal zone 1<input value={tradeForm.reversalZone1} onChange={(event) => setTradeForm((prev) => ({ ...prev, reversalZone1: event.target.value }))} /></label>
-                              <label>Potential reversal zone 2<input value={tradeForm.reversalZone2} onChange={(event) => setTradeForm((prev) => ({ ...prev, reversalZone2: event.target.value }))} /></label>
-                            </div>
-                            <div className="grid-3">
-                              <label>Potential swing zone 1<input value={tradeForm.swingZone1} onChange={(event) => setTradeForm((prev) => ({ ...prev, swingZone1: event.target.value }))} /></label>
-                              <label>Potential swing zone 2<input value={tradeForm.swingZone2} onChange={(event) => setTradeForm((prev) => ({ ...prev, swingZone2: event.target.value }))} /></label>
-                            </div>
-                          </>
-                        )}
-                      </section>
-
-                      <section className="analysis-pdf-section">
-                        <div className="collapsible-header">
-                          <h4>Market Structure</h4>
-                          <button
-                            type="button"
-                            className="icon-button collapse-icon-button"
-                            onClick={() => toggleAnalysisSection('marketStructure')}
-                            aria-label={analysisSectionOpen.marketStructure ? 'Collapse market structure' : 'Expand market structure'}
-                            title={analysisSectionOpen.marketStructure ? 'Collapse' : 'Expand'}
-                          >
-                            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                              {analysisSectionOpen.marketStructure ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
-                            </svg>
-                          </button>
-                        </div>
-                        {analysisSectionOpen.marketStructure && (
-                          <div className="market-structure-grid">
-                            {tradeForm.marketStructure.map((row, index) => (
-                              <div key={`${row.rangeName}-${index}`} className="market-structure-row">
-                                <span>{row.rangeName}</span>
-                                <div className="radio-inline compact">
-                                  <label>
-                                    <input
-                                      type="radio"
-                                      name={`market-structure-${index}`}
-                                      checked={row.bias === 'buy'}
-                                      onChange={() => setTradeForm((prev) => ({
-                                        ...prev,
-                                        marketStructure: prev.marketStructure.map((entry, entryIndex) => (
-                                          entryIndex === index ? { ...entry, bias: 'buy' } : entry
-                                        )),
-                                      }))}
-                                    />
-                                    Buy
-                                  </label>
-                                  <label>
-                                    <input
-                                      type="radio"
-                                      name={`market-structure-${index}`}
-                                      checked={row.bias === 'sell'}
-                                      onChange={() => setTradeForm((prev) => ({
-                                        ...prev,
-                                        marketStructure: prev.marketStructure.map((entry, entryIndex) => (
-                                          entryIndex === index ? { ...entry, bias: 'sell' } : entry
-                                        )),
-                                      }))}
-                                    />
-                                    Sell
-                                  </label>
-                                  <label>
-                                    <input
-                                      type="radio"
-                                      name={`market-structure-${index}`}
-                                      checked={row.bias === 'none'}
-                                      onChange={() => setTradeForm((prev) => ({
-                                        ...prev,
-                                        marketStructure: prev.marketStructure.map((entry, entryIndex) => (
-                                          entryIndex === index ? { ...entry, bias: 'none' } : entry
-                                        )),
-                                      }))}
-                                    />
-                                    None
-                                  </label>
-                                </div>
-                                <input
-                                  placeholder="Level"
-                                  value={row.level}
-                                  onChange={(event) => setTradeForm((prev) => ({
-                                    ...prev,
-                                    marketStructure: prev.marketStructure.map((entry, entryIndex) => (
-                                      entryIndex === index ? { ...entry, level: event.target.value } : entry
-                                    )),
-                                  }))}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </section>
-                    </div>
-                  </fieldset>
-
-                  <fieldset>
-                    <legend>Trade Info</legend>
+                    <legend>Trades</legend>
                   <div className="grid-3">
                     <label>Date<input type="date" value={tradeForm.tradeDate} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeDate: event.target.value }))} required /></label>
                     <label>Time<input type="time" value={tradeForm.tradeTime} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeTime: event.target.value }))} /></label>
+                    <label>Session<select value={tradeForm.sessionName} onChange={(event) => setTradeForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
                     <label>Asset<input value={tradeForm.tradingAsset} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradingAsset: event.target.value }))} required /></label>
                     <label>Buy / Sell<select value={tradeForm.tradeSide} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeSide: event.target.value as TradeLogFormState['tradeSide'] }))}><option value="buy">Buy</option><option value="sell">Sell</option></select></label>
                     <label>Strategy<input value={tradeForm.strategy} onChange={(event) => setTradeForm((prev) => ({ ...prev, strategy: event.target.value }))} required /></label>
