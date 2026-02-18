@@ -544,6 +544,22 @@ fieldset {
   box-shadow: 0 20px 45px #1f2d3f33;
 }
 
+.chart-paste-zone {
+  border: 1px dashed #9ec0ef;
+  background: #f3f8ff;
+  color: #1f426a;
+  border-radius: 0.7rem;
+  padding: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: text;
+}
+
+.chart-paste-zone:focus {
+  outline: 2px solid #7caef0;
+  outline-offset: 2px;
+}
+
 .chart-preview-square {
   width: 100%;
   aspect-ratio: 1 / 1;

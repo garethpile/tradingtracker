@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { ClipboardEvent, FormEvent } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import outputs from '../amplify_outputs.json';
@@ -104,6 +104,7 @@ type TradeLogFormState = {
   feelings: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments: string;
   chartLink: string;
+  chartImageData: string;
 };
 
 type TradeLogItem = {
@@ -127,6 +128,7 @@ type TradeLogItem = {
   feelings?: string;
   comments?: string;
   chartLink?: string;
+  chartImageData?: string;
   journalScore: number;
 };
 
@@ -220,6 +222,7 @@ const defaultTradeForm = (): TradeLogFormState => ({
   feelings: 'Not filled',
   comments: '',
   chartLink: '',
+  chartImageData: '',
 });
 
 const defaultAnalysisForm = (): AnalysisFormState => ({
@@ -411,6 +414,35 @@ const toFixed2OrDash = (value?: number): string => {
 const isImageLikeUrl = (value: string): boolean => {
   const normalized = value.toLowerCase().split('?')[0].split('#')[0];
   return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'].some((ext) => normalized.endsWith(ext));
+};
+
+const toResizedDataUrl = async (file: File, maxSide = 1400, quality = 0.85): Promise<string> => {
+  const fileDataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(new Error('Failed to read image'));
+    reader.readAsDataURL(file);
+  });
+
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = fileDataUrl;
+  });
+
+  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return fileDataUrl;
+  }
+  ctx.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
 };
 
 const computeEstimatedLoss = (entry?: number, stopLoss?: number): number | undefined => {
@@ -1132,6 +1164,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         feelings: item.feelings as TradeLogFormState['feelings'] ?? 'Not filled',
         comments: item.comments ?? '',
         chartLink: item.chartLink ?? '',
+        chartImageData: item.chartImageData ?? '',
       });
     } else {
       setEditingSessionTrade(null);
@@ -1177,6 +1210,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       feelings: tradeForm.feelings,
       comments: tradeForm.comments,
       chartLink: tradeForm.chartLink,
+      chartImageData: tradeForm.chartImageData || undefined,
     };
 
     setBusy(true);
@@ -1229,6 +1263,28 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete trade');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleChartImagePaste = async (event: ClipboardEvent<HTMLElement>) => {
+    const items = Array.from(event.clipboardData?.items ?? []);
+    const imageItem = items.find((item) => item.type.startsWith('image/'));
+    if (!imageItem) {
+      return;
+    }
+
+    event.preventDefault();
+    const file = imageItem.getAsFile();
+    if (!file) {
+      return;
+    }
+
+    try {
+      const dataUrl = await toResizedDataUrl(file);
+      setTradeForm((prev) => ({ ...prev, chartImageData: dataUrl }));
+      setError(null);
+    } catch {
+      setError('Failed to paste chart image');
     }
   };
 
@@ -1746,7 +1802,15 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td>{trade.tradeSide ?? '-'}</td>
                             <td>{trade.strategy ?? '-'}</td>
                             <td>{toFixed2OrDash(trade.totalProfit)}</td>
-                            <td>{trade.chartLink ? <a href={trade.chartLink} target="_blank" rel="noreferrer">Open link</a> : '-'}</td>
+                            <td>
+                              {trade.chartLink ? (
+                                <a href={trade.chartLink} target="_blank" rel="noreferrer">Open link</a>
+                              ) : trade.chartImageData ? (
+                                'Pasted image'
+                              ) : (
+                                '-'
+                              )}
+                            </td>
                             <td><button type="button" className="ghost" onClick={() => openTradeDialog(trade)}>View / Edit</button></td>
                           </tr>
                         ))}
@@ -1767,7 +1831,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                   <h3>{editingSessionTrade ? 'Manage Trade' : 'Create Trade'}</h3>
                   <button type="button" className="ghost" onClick={closeTradeDialog}>Close</button>
                 </div>
-                <form className="market-form" onSubmit={saveSessionTrade}>
+                <form className="market-form" onSubmit={saveSessionTrade} onPaste={(event) => void handleChartImagePaste(event)}>
                   <fieldset>
                     <legend>Trades</legend>
                   <div className="grid-3">
@@ -1813,9 +1877,25 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                   {tradeForm.chartLink.trim().length > 0 && (
                     <a href={tradeForm.chartLink} target="_blank" rel="noreferrer">Open chart hyperlink</a>
                   )}
-                  {tradeForm.chartLink.trim().length > 0 && (
+                  <div
+                    className="chart-paste-zone"
+                    onPaste={(event) => void handleChartImagePaste(event)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label="Paste chart image here"
+                  >
+                    Paste chart image here (Cmd/Ctrl + V)
+                  </div>
+                  {tradeForm.chartImageData && (
+                    <button type="button" className="ghost" onClick={() => setTradeForm((prev) => ({ ...prev, chartImageData: '' }))}>
+                      Remove pasted image
+                    </button>
+                  )}
+                  {(tradeForm.chartImageData || tradeForm.chartLink.trim().length > 0) && (
                     <div className="chart-preview-square" aria-label="Chart preview">
-                      {isImageLikeUrl(tradeForm.chartLink) ? (
+                      {tradeForm.chartImageData ? (
+                        <img src={tradeForm.chartImageData} alt="Pasted trade chart" />
+                      ) : isImageLikeUrl(tradeForm.chartLink) ? (
                         <img src={tradeForm.chartLink} alt="Trade chart" />
                       ) : (
                         <div className="chart-preview-placeholder">

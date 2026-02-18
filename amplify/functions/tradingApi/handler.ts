@@ -104,6 +104,7 @@ type TradeLogPayload = {
   feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments?: string;
   chartLink?: string;
+  chartImageData?: string;
 };
 
 type TradingDayPayload = {
@@ -142,6 +143,7 @@ type SessionTradePayload = {
   feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments?: string;
   chartLink?: string;
+  chartImageData?: string;
 };
 
 type ConfluencePayload = {
@@ -313,6 +315,7 @@ const scoreTradeLog = (item: TradeLogPayload): number => {
     item.feelings,
     item.comments,
     item.chartLink,
+    item.chartImageData,
   ];
 
   const step1Done = step1.filter((value) => value !== undefined && value !== '').length;
