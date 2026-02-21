@@ -521,7 +521,7 @@ function App() {
 }
 
 function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (() => void) | undefined }) {
-  const [activeTab, setActiveTab] = useState<MenuTab>('checklist');
+  const [activeTab, setActiveTab] = useState<MenuTab>('trades');
   const [checklistForm, setChecklistForm] = useState<FormState>(defaultChecklistForm);
   const [tradeForm, setTradeForm] = useState<TradeLogFormState>(defaultTradeForm);
   const [analysisForm, setAnalysisForm] = useState<AnalysisFormState>(defaultAnalysisForm);
@@ -549,7 +549,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [editingConfluenceKey, setEditingConfluenceKey] = useState<string | null>(null);
   const [editingConfluenceValue, setEditingConfluenceValue] = useState('');
   const [tradingDaySectionOpen, setTradingDaySectionOpen] = useState({
-    marketAnalysis: true,
+    marketAnalysis: false,
     trades: true,
   });
   const [analysisSectionOpen, setAnalysisSectionOpen] = useState({
@@ -675,6 +675,10 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   };
   const toggleTradingDaySection = (section: keyof typeof tradingDaySectionOpen) => {
     setTradingDaySectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+  const openTradingDaysTab = () => {
+    setActiveTab('trades');
+    setTradingDaySectionOpen((prev) => ({ ...prev, marketAnalysis: false }));
   };
 
   useEffect(() => {
@@ -1175,7 +1179,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         tradingAsset: item.tradingAsset,
         tradeSide: item.tradeSide ?? 'buy',
         strategy: item.strategy,
-        confluences: item.confluences && item.confluences.length > 0 ? item.confluences : [''],
+        confluences: item.confluences && item.confluences.length > 0 ? item.confluences.slice(0, 5) : [''],
         entryPrice: toInputString(item.entryPrice),
         riskRewardRatio: toInputString(item.riskRewardRatio),
         stopLossPrice: toInputString(item.stopLossPrice),
@@ -1492,9 +1496,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
           </div>
         </div>
         <nav className="menu-tabs" aria-label="Dashboard sections">
-          <button className={activeTab === 'checklist' ? 'tab active' : 'tab'} onClick={() => setActiveTab('checklist')}>Checklist</button>
           <button className={activeTab === 'tradeCalc' ? 'tab active' : 'tab'} onClick={() => setActiveTab('tradeCalc')}>Trade Calc</button>
-          <button className={activeTab === 'trades' ? 'tab active' : 'tab'} onClick={() => setActiveTab('trades')}>Trading Days</button>
+          <button className={activeTab === 'trades' ? 'tab active' : 'tab'} onClick={openTradingDaysTab}>Trading Days</button>
           <button className={activeTab === 'confluences' ? 'tab active' : 'tab'} onClick={() => setActiveTab('confluences')}>Confluences</button>
           <label className="window-select">
             Window
@@ -1879,19 +1882,49 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                   </div>
                   <label>
                     Confluences
-                    <select
-                      multiple
-                      size={Math.min(Math.max(confluenceSuggestions.length, 4), 10)}
-                      value={tradeForm.confluences}
-                      onChange={(event) => {
-                        const selectedValues = Array.from(event.target.selectedOptions).map((option) => option.value);
-                        setTradeForm((prev) => ({ ...prev, confluences: selectedValues }));
-                      }}
-                    >
-                      {confluenceSuggestions.map((option) => (
-                        <option key={option} value={option}>{option}</option>
+                    <div className="confluences-list">
+                      {tradeForm.confluences.map((entry, index) => (
+                        <div key={`trade-confluence-${index}`} className="confluence-row">
+                          <input
+                            list="trade-confluence-suggestions"
+                            value={entry}
+                            onChange={(event) => {
+                              const next = [...tradeForm.confluences];
+                              next[index] = event.target.value;
+                              setTradeForm((prev) => ({ ...prev, confluences: next }));
+                            }}
+                            placeholder={`Confluence ${index + 1}`}
+                          />
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() => {
+                              setTradeForm((prev) => ({
+                                ...prev,
+                                confluences: prev.confluences.filter((_, itemIndex) => itemIndex !== index),
+                              }));
+                            }}
+                            disabled={tradeForm.confluences.length <= 1}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       ))}
-                    </select>
+                    </div>
+                    <datalist id="trade-confluence-suggestions">
+                      {confluenceSuggestions.map((option) => (
+                        <option key={option} value={option} />
+                      ))}
+                    </datalist>
+                    <button
+                      type="button"
+                      className="ghost add-confluence"
+                      onClick={() => setTradeForm((prev) => ({ ...prev, confluences: [...prev.confluences, ''] }))}
+                      disabled={tradeForm.confluences.length >= 5}
+                    >
+                      Add confluence
+                    </button>
+                    <small>{tradeForm.confluences.length}/5</small>
                   </label>
                   <label>Price chart link<input value={tradeForm.chartLink} onChange={(event) => setTradeForm((prev) => ({ ...prev, chartLink: event.target.value }))} /></label>
                   {tradeForm.chartLink.trim().length > 0 && (
