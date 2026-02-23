@@ -35,7 +35,8 @@ type TrendResponse = {
 
 type AnalysisDirection = 'bullish' | 'bearish' | 'consolidation' | 'none';
 type Impact = 'high' | 'low';
-type MarketStructureBias = 'buy' | 'sell' | 'none';
+type TrendBias = 'bullish' | 'bearish' | 'consolidation' | 'none';
+type ZoneBand = 'sell' | 'neutral' | 'buy';
 
 type AnalysisFormState = {
   pair: string;
@@ -59,15 +60,21 @@ type AnalysisFormState = {
   currentDayLow: string;
   currentDayHigh: string;
   futuresPrice: string;
+  prevVolatility: string;
+  currentVolatility: string;
+  futuresVolatility: string;
   priceActionNotes: string;
   redFolderNews: boolean;
   newsImpact: Impact;
-  newsTime: string;
+  newsTimes: string;
   newsNotes: string;
+  expectedVolatility: string;
   sellRsiLevel: string;
   buyRsiLevel: string;
   hasClearTrend: boolean;
   currentTrend: AnalysisDirection;
+  shortTermBias: TrendBias;
+  longerTermBias: TrendBias;
   directionalBias: 'bullish' | 'bearish' | 'none';
   tradingStyle: 'trend' | 'consolidation';
   tradingNotes: string;
@@ -82,9 +89,12 @@ type AnalysisFormState = {
   swingZone1: string;
   swingZone2: string;
   marketStructure: Array<{
+    tag: 'pivot' | 'pdh' | 'resistance' | 'support' | 'pdl';
     rangeName: string;
-    bias: MarketStructureBias;
     level: string;
+    buyConfluences: string;
+    sellConfluences: string;
+    zoneBand: ZoneBand;
   }>;
 };
 
@@ -95,11 +105,10 @@ type TradeLogFormState = {
   tradingAsset: string;
   tradeSide: 'buy' | 'sell';
   strategy: string;
+  lotSize: string;
   confluences: string[];
   entryPrice: string;
-  riskRewardRatio: string;
   stopLossPrice: string;
-  takeProfitPrice: string;
   exitPrice: string;
   feelings: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments: string;
@@ -116,6 +125,7 @@ type TradeLogItem = {
   tradingAsset: string;
   strategy: string;
   tradeSide?: 'buy' | 'sell';
+  lotSize?: number;
   confluences?: string[];
   entryPrice?: number;
   riskRewardRatio?: number;
@@ -146,6 +156,7 @@ type MarketAnalysisItem = AnalysisFormState & {
   dayId?: string;
   analysisTime?: string;
   analysisScore?: number;
+  newsTime?: string;
 };
 
 type SessionTradeItem = TradeLogItem & {
@@ -213,11 +224,10 @@ const defaultTradeForm = (): TradeLogFormState => ({
   tradingAsset: 'XAUUSD',
   tradeSide: 'buy',
   strategy: '',
+  lotSize: '',
   confluences: [''],
   entryPrice: '',
-  riskRewardRatio: '',
   stopLossPrice: '',
-  takeProfitPrice: '',
   exitPrice: '',
   feelings: 'Not filled',
   comments: '',
@@ -247,15 +257,21 @@ const defaultAnalysisForm = (): AnalysisFormState => ({
   currentDayLow: '',
   currentDayHigh: '',
   futuresPrice: '',
+  prevVolatility: '',
+  currentVolatility: '',
+  futuresVolatility: '',
   priceActionNotes: '',
   redFolderNews: false,
   newsImpact: 'high',
-  newsTime: '',
+  newsTimes: '',
   newsNotes: '',
+  expectedVolatility: '',
   sellRsiLevel: '',
   buyRsiLevel: '',
   hasClearTrend: true,
   currentTrend: 'bullish',
+  shortTermBias: 'bullish',
+  longerTermBias: 'bullish',
   directionalBias: 'bullish',
   tradingStyle: 'trend',
   tradingNotes: '',
@@ -269,11 +285,21 @@ const defaultAnalysisForm = (): AnalysisFormState => ({
   reversalZone2: '',
   swingZone1: '',
   swingZone2: '',
-  marketStructure: Array.from({ length: 13 }, (_, index) => ({
-    rangeName: `Range ${index + 1}`,
-    bias: 'none',
-    level: '',
-  })),
+  marketStructure: [
+    { tag: 'pivot', rangeName: 'Range 1', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'sell' },
+    { tag: 'pivot', rangeName: 'Range 2', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'sell' },
+    { tag: 'pdh', rangeName: 'Range 3', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'neutral' },
+    { tag: 'resistance', rangeName: 'Range 4', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'neutral' },
+    { tag: 'pivot', rangeName: 'Range 5', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'neutral' },
+    { tag: 'support', rangeName: 'Range 6', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'neutral' },
+    { tag: 'pdl', rangeName: 'Range 7', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'neutral' },
+    { tag: 'pivot', rangeName: 'Range 8', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'buy' },
+    { tag: 'pivot', rangeName: 'Range 9', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'buy' },
+    { tag: 'pivot', rangeName: 'Range 10', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'buy' },
+    { tag: 'pivot', rangeName: 'Range 11', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'buy' },
+    { tag: 'pivot', rangeName: 'Range 12', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'buy' },
+    { tag: 'pivot', rangeName: 'Range 13', level: '', buyConfluences: '', sellConfluences: '', zoneBand: 'buy' },
+  ],
 });
 
 const defaultTradingDayForm = () => ({
@@ -281,6 +307,31 @@ const defaultTradingDayForm = () => ({
   title: '',
   notes: '',
 });
+
+const normalizeMarketStructureRows = (rows: unknown): AnalysisFormState['marketStructure'] => {
+  const defaults = defaultAnalysisForm().marketStructure;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return defaults;
+  }
+
+  return defaults.map((defaultRow, index) => {
+    const row = rows[index] as Record<string, unknown> | undefined;
+    const legacyBias = String(row?.bias ?? 'none');
+    const inferredZoneBand: ZoneBand = legacyBias === 'sell' ? 'sell' : legacyBias === 'buy' ? 'buy' : defaultRow.zoneBand;
+    const tag = String(row?.tag ?? defaultRow.tag).toLowerCase();
+
+    return {
+      tag: (tag === 'pivot' || tag === 'pdh' || tag === 'resistance' || tag === 'support' || tag === 'pdl') ? tag : defaultRow.tag,
+      rangeName: String(row?.rangeName ?? defaultRow.rangeName),
+      level: String(row?.level ?? defaultRow.level),
+      buyConfluences: String(row?.buyConfluences ?? ''),
+      sellConfluences: String(row?.sellConfluences ?? ''),
+      zoneBand: (row?.zoneBand === 'sell' || row?.zoneBand === 'neutral' || row?.zoneBand === 'buy')
+        ? row.zoneBand
+        : inferredZoneBand,
+    };
+  });
+};
 
 const outputConfig = {
   apiUrl: (outputs as { custom?: { tradingTrackerApiUrl?: string } }).custom?.tradingTrackerApiUrl
@@ -340,6 +391,30 @@ const defaultConfluenceOptions = [
   'RSI - Below 45',
   'MACD - Histogram expanding in dorection of trade',
 ];
+
+const marketAnalysisSessionOptions = [
+  { key: 'asian', label: 'Asian', value: 'Asia Session' },
+  { key: 'london', label: 'London', value: 'London Open' },
+  { key: 'us', label: 'US', value: 'US Session' },
+] as const;
+
+type MarketAnalysisSessionKey = typeof marketAnalysisSessionOptions[number]['key'];
+
+const getMarketAnalysisSessionKey = (sessionName?: string): MarketAnalysisSessionKey => {
+  const normalized = String(sessionName ?? '').trim().toLowerCase();
+  if (normalized.includes('asia')) {
+    return 'asian';
+  }
+  if (normalized.includes('new york') || normalized === 'us session' || normalized === 'us') {
+    return 'us';
+  }
+  return 'london';
+};
+
+const getMarketAnalysisSessionLabel = (key: MarketAnalysisSessionKey): string => {
+  const match = marketAnalysisSessionOptions.find((option) => option.key === key);
+  return match?.value ?? 'London Open';
+};
 
 const preMarketChecklistFields = [
   { key: 'fundamentalsSentiment', label: 'Fundamentals | News sentiment' },
@@ -445,33 +520,16 @@ const toResizedDataUrl = async (file: File, maxSide = 1400, quality = 0.85): Pro
   return canvas.toDataURL('image/jpeg', quality);
 };
 
-const computeEstimatedLoss = (entry?: number, stopLoss?: number): number | undefined => {
-  if (entry === undefined || stopLoss === undefined) {
-    return undefined;
-  }
-
-  return Number(Math.abs(entry - stopLoss).toFixed(2));
-};
-
-const computeEstimatedProfit = (entry?: number, takeProfit?: number): number | undefined => {
-  if (entry === undefined || takeProfit === undefined) {
-    return undefined;
-  }
-
-  return Number(Math.abs(takeProfit - entry).toFixed(2));
-};
-
 const computeTradeProfit = (
   entry?: number,
   exit?: number,
   tradeSide: 'buy' | 'sell' = 'buy',
-  takeProfit?: number,
 ): number | undefined => {
   if (entry === undefined || exit === undefined) {
     return undefined;
   }
 
-  const isBuy = tradeSide === 'buy' || (tradeSide !== 'sell' && (takeProfit === undefined ? true : takeProfit >= entry));
+  const isBuy = tradeSide === 'buy';
   const raw = isBuy ? exit - entry : entry - exit;
   return Number(raw.toFixed(2));
 };
@@ -531,6 +589,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [tradingDays, setTradingDays] = useState<TradingDayItem[]>([]);
   const [dayTrades, setDayTrades] = useState<SessionTradeItem[]>([]);
   const [dayAnalyses, setDayAnalyses] = useState<MarketAnalysisItem[]>([]);
+  const [selectedMarketAnalysisSession, setSelectedMarketAnalysisSession] = useState<MarketAnalysisSessionKey>('london');
   const [selectedTradingDayId, setSelectedTradingDayId] = useState<string | null>(null);
   const [editingSessionTrade, setEditingSessionTrade] = useState<{ id: string; createdAt: string } | null>(null);
   const [editingAnalysis, setEditingAnalysis] = useState<{ id: string; createdAt: string } | null>(null);
@@ -557,6 +616,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     priceAction: true,
     newsNotes: true,
     pullBackLevels: true,
+    trendNotes: true,
     tradingNotes: true,
     potentialZones: true,
     marketStructure: true,
@@ -599,18 +659,30 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
 
   const entryPriceValue = toNumberOrUndefined(tradeForm.entryPrice);
   const stopLossPriceValue = toNumberOrUndefined(tradeForm.stopLossPrice);
-  const takeProfitPriceValue = toNumberOrUndefined(tradeForm.takeProfitPrice);
   const exitPriceValue = toNumberOrUndefined(tradeForm.exitPrice);
-  const estimatedLossValue = computeEstimatedLoss(entryPriceValue, stopLossPriceValue);
-  const estimatedProfitValue = computeEstimatedProfit(entryPriceValue, takeProfitPriceValue);
-  const tradeProfitValue = computeTradeProfit(entryPriceValue, exitPriceValue, tradeForm.tradeSide, takeProfitPriceValue);
+  const tradeProfitValue = computeTradeProfit(entryPriceValue, exitPriceValue, tradeForm.tradeSide);
   const selectedTradingDay = useMemo(
     () => tradingDays.find((item) => item.id === selectedTradingDayId) ?? null,
     [tradingDays, selectedTradingDayId],
   );
+  const analysesBySession = useMemo(() => {
+    const bySession: Partial<Record<MarketAnalysisSessionKey, MarketAnalysisItem>> = {};
+    dayAnalyses.forEach((item) => {
+      const key = getMarketAnalysisSessionKey(item.sessionName);
+      const existing = bySession[key];
+      if (!existing || String(item.createdAt ?? '').localeCompare(String(existing.createdAt ?? '')) > 0) {
+        bySession[key] = item;
+      }
+    });
+    return bySession;
+  }, [dayAnalyses]);
   const activeDayAnalysis = useMemo(
-    () => dayAnalyses[0] ?? null,
-    [dayAnalyses],
+    () => analysesBySession[selectedMarketAnalysisSession] ?? null,
+    [analysesBySession, selectedMarketAnalysisSession],
+  );
+  const capturedMarketAnalysisCount = useMemo(
+    () => marketAnalysisSessionOptions.filter((option) => Boolean(analysesBySession[option.key])).length,
+    [analysesBySession],
   );
   const tradingDayYears = useMemo(
     () => Array.from(new Set(tradingDays.map((item) => item.tradingDate.slice(0, 4)))).sort((a, b) => b.localeCompare(a)),
@@ -861,7 +933,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       setAnalysisForm({
         pair: activeDayAnalysis.pair ?? 'XAUUSD',
         tradingDate: activeDayAnalysis.tradingDate,
-        sessionName: activeDayAnalysis.sessionName ?? 'London Open',
+        sessionName: getMarketAnalysisSessionLabel(selectedMarketAnalysisSession),
         fundamentalsSentiment: activeDayAnalysis.fundamentalsSentiment ?? 'bullish',
         movingAverages5m: activeDayAnalysis.movingAverages5m ?? 'bullish',
         patternsTrend5m: activeDayAnalysis.patternsTrend5m ?? 'bullish',
@@ -880,15 +952,21 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         currentDayLow: activeDayAnalysis.currentDayLow ?? '',
         currentDayHigh: activeDayAnalysis.currentDayHigh ?? '',
         futuresPrice: activeDayAnalysis.futuresPrice ?? '',
+        prevVolatility: activeDayAnalysis.prevVolatility ?? '',
+        currentVolatility: activeDayAnalysis.currentVolatility ?? '',
+        futuresVolatility: activeDayAnalysis.futuresVolatility ?? '',
         priceActionNotes: activeDayAnalysis.priceActionNotes ?? '',
         redFolderNews: activeDayAnalysis.redFolderNews ?? false,
         newsImpact: activeDayAnalysis.newsImpact ?? 'high',
-        newsTime: activeDayAnalysis.newsTime ?? '',
+        newsTimes: activeDayAnalysis.newsTimes ?? activeDayAnalysis.newsTime ?? '',
         newsNotes: activeDayAnalysis.newsNotes ?? '',
+        expectedVolatility: activeDayAnalysis.expectedVolatility ?? '',
         sellRsiLevel: activeDayAnalysis.sellRsiLevel ?? '',
         buyRsiLevel: activeDayAnalysis.buyRsiLevel ?? '',
         hasClearTrend: activeDayAnalysis.hasClearTrend ?? true,
         currentTrend: activeDayAnalysis.currentTrend ?? 'bullish',
+        shortTermBias: activeDayAnalysis.shortTermBias ?? activeDayAnalysis.directionalBias ?? 'bullish',
+        longerTermBias: activeDayAnalysis.longerTermBias ?? 'bullish',
         directionalBias: activeDayAnalysis.directionalBias ?? 'bullish',
         tradingStyle: activeDayAnalysis.tradingStyle ?? 'trend',
         tradingNotes: activeDayAnalysis.tradingNotes ?? '',
@@ -902,9 +980,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         reversalZone2: activeDayAnalysis.reversalZone2 ?? '',
         swingZone1: activeDayAnalysis.swingZone1 ?? '',
         swingZone2: activeDayAnalysis.swingZone2 ?? '',
-        marketStructure: activeDayAnalysis.marketStructure && activeDayAnalysis.marketStructure.length > 0
-          ? activeDayAnalysis.marketStructure
-          : defaultAnalysisForm().marketStructure,
+        marketStructure: normalizeMarketStructureRows(activeDayAnalysis.marketStructure),
       });
       setAnalysisTime(activeDayAnalysis.analysisTime ?? '');
       return;
@@ -914,9 +990,17 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     setAnalysisForm({
       ...defaultAnalysisForm(),
       tradingDate: selectedTradingDay.tradingDate,
+      sessionName: getMarketAnalysisSessionLabel(selectedMarketAnalysisSession),
     });
     setAnalysisTime(new Date().toTimeString().slice(0, 5));
-  }, [activeDayAnalysis, selectedTradingDay]);
+  }, [activeDayAnalysis, selectedTradingDay, selectedMarketAnalysisSession]);
+
+  useEffect(() => {
+    if (!selectedTradingDayId) {
+      return;
+    }
+    setSelectedMarketAnalysisSession('london');
+  }, [selectedTradingDayId]);
 
   const saveAnalysis = async (event: FormEvent) => {
     event.preventDefault();
@@ -928,6 +1012,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     const payload = {
       ...analysisForm,
       dayId: selectedTradingDayId,
+      sessionName: getMarketAnalysisSessionLabel(selectedMarketAnalysisSession),
       analysisTime,
     };
 
@@ -992,7 +1077,14 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
           <label>Pair<input value={analysisForm.pair} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, pair: event.target.value }))} /></label>
           <label>Date<input type="date" value={analysisForm.tradingDate} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingDate: event.target.value }))} required /></label>
           <label>Time<input type="time" value={analysisTime} onChange={(event) => setAnalysisTime(event.target.value)} required /></label>
-          <label>Session<select value={analysisForm.sessionName} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sessionName: event.target.value }))}><option>London Open</option><option>New York Open</option><option>Asia Session</option><option>Custom</option></select></label>
+          <label>
+            Session
+            <select value={selectedMarketAnalysisSession} onChange={(event) => setSelectedMarketAnalysisSession(event.target.value as MarketAnalysisSessionKey)}>
+              {marketAnalysisSessionOptions.map((option) => (
+                <option key={option.key} value={option.key}>{option.value}</option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="analysis-pdf-stack">
           <section className="analysis-pdf-section analysis-pdf-table">
@@ -1047,12 +1139,32 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             </div>
             {analysisSectionOpen.priceAction && (
               <>
-                <div className="grid-3">
-                  <label>Prev day low<input value={analysisForm.prevDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayLow: event.target.value }))} /></label>
-                  <label>Prev day high<input value={analysisForm.prevDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayHigh: event.target.value }))} /></label>
-                  <label>Futures price<input value={analysisForm.futuresPrice} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, futuresPrice: event.target.value }))} /></label>
-                  <label>Current day low<input value={analysisForm.currentDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayLow: event.target.value }))} /></label>
-                  <label>Current day high<input value={analysisForm.currentDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayHigh: event.target.value }))} /></label>
+                <div className="analysis-price-table">
+                  <div className="analysis-price-row">
+                    <span>Prev day high</span>
+                    <input value={analysisForm.prevDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayHigh: event.target.value }))} />
+                    <input placeholder="Volatility" value={analysisForm.prevVolatility} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevVolatility: event.target.value }))} />
+                  </div>
+                  <div className="analysis-price-row">
+                    <span>Prev day low</span>
+                    <input value={analysisForm.prevDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevDayLow: event.target.value }))} />
+                    <input placeholder="Volatility" value={analysisForm.prevVolatility} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, prevVolatility: event.target.value }))} />
+                  </div>
+                  <div className="analysis-price-row">
+                    <span>Current day high</span>
+                    <input value={analysisForm.currentDayHigh} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayHigh: event.target.value }))} />
+                    <input placeholder="Volatility" value={analysisForm.currentVolatility} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentVolatility: event.target.value }))} />
+                  </div>
+                  <div className="analysis-price-row">
+                    <span>Current day low</span>
+                    <input value={analysisForm.currentDayLow} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentDayLow: event.target.value }))} />
+                    <input placeholder="Volatility" value={analysisForm.currentVolatility} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentVolatility: event.target.value }))} />
+                  </div>
+                  <div className="analysis-price-row">
+                    <span>Futures price</span>
+                    <input value={analysisForm.futuresPrice} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, futuresPrice: event.target.value }))} />
+                    <input placeholder="Volatility" value={analysisForm.futuresVolatility} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, futuresVolatility: event.target.value }))} />
+                  </div>
                 </div>
                 <label>Price action notes<textarea rows={2} value={analysisForm.priceActionNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, priceActionNotes: event.target.value }))} /></label>
               </>
@@ -1070,8 +1182,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 <div className="grid-3">
                   <div className="radio-inline"><span>Red folder news</span><label><input type="radio" name="analysisRedFolderNews" checked={analysisForm.redFolderNews} onChange={() => setAnalysisForm((prev) => ({ ...prev, redFolderNews: true }))} /> Yes</label><label><input type="radio" name="analysisRedFolderNews" checked={!analysisForm.redFolderNews} onChange={() => setAnalysisForm((prev) => ({ ...prev, redFolderNews: false }))} /> No</label></div>
                   <div className="radio-inline"><span>Impact</span><label><input type="radio" name="analysisNewsImpact" checked={analysisForm.newsImpact === 'high'} onChange={() => setAnalysisForm((prev) => ({ ...prev, newsImpact: 'high' }))} /> High</label><label><input type="radio" name="analysisNewsImpact" checked={analysisForm.newsImpact === 'low'} onChange={() => setAnalysisForm((prev) => ({ ...prev, newsImpact: 'low' }))} /> Low</label></div>
-                  <label>News time<input value={analysisForm.newsTime} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsTime: event.target.value }))} /></label>
                 </div>
+                <label>News times<textarea rows={3} value={analysisForm.newsTimes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsTimes: event.target.value }))} /></label>
                 <label>News notes<textarea rows={2} value={analysisForm.newsNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, newsNotes: event.target.value }))} /></label>
               </>
             )}
@@ -1083,7 +1195,32 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.pullBackLevels ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
               </button>
             </div>
-            {analysisSectionOpen.pullBackLevels && <div className="grid-3"><label>Sell RSI level (overbought)<input value={analysisForm.sellRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellRsiLevel: event.target.value }))} /></label><label>Buy RSI level (oversold)<input value={analysisForm.buyRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyRsiLevel: event.target.value }))} /></label></div>}
+            {analysisSectionOpen.pullBackLevels && (
+              <div className="grid-3">
+                <label>Expected volatility<input value={analysisForm.expectedVolatility} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, expectedVolatility: event.target.value }))} /></label>
+                <label>Sell RSI level (overbought)<input value={analysisForm.sellRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, sellRsiLevel: event.target.value }))} /></label>
+                <label>Buy RSI level (oversold)<input value={analysisForm.buyRsiLevel} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, buyRsiLevel: event.target.value }))} /></label>
+              </div>
+            )}
+          </section>
+          <section className="analysis-pdf-section">
+            <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
+              <h4>Trend Notes</h4>
+              <button type="button" className="icon-button collapse-icon-button" onClick={() => toggleAnalysisSection('trendNotes')} aria-label={analysisSectionOpen.trendNotes ? 'Collapse trend notes' : 'Expand trend notes'} title={analysisSectionOpen.trendNotes ? 'Collapse' : 'Expand'}>
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">{analysisSectionOpen.trendNotes ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}</svg>
+              </button>
+            </div>
+            {analysisSectionOpen.trendNotes && (
+              <>
+                <div className="grid-3">
+                  <div className="radio-inline"><span>Has a clear trend</span><label><input type="radio" name="analysisHasTrend" checked={analysisForm.hasClearTrend} onChange={() => setAnalysisForm((prev) => ({ ...prev, hasClearTrend: true }))} /> Yes</label><label><input type="radio" name="analysisHasTrend" checked={!analysisForm.hasClearTrend} onChange={() => setAnalysisForm((prev) => ({ ...prev, hasClearTrend: false }))} /> No</label></div>
+                  <label>Current trend<select value={analysisForm.currentTrend} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentTrend: event.target.value as AnalysisFormState['currentTrend'] }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="none">None</option></select></label>
+                  <label>Short term bias<select value={analysisForm.shortTermBias} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, shortTermBias: event.target.value as AnalysisFormState['shortTermBias'], directionalBias: event.target.value === 'none' || event.target.value === 'consolidation' ? prev.directionalBias : event.target.value as AnalysisFormState['directionalBias'] }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="none">None</option></select></label>
+                  <label>Longer term bias<select value={analysisForm.longerTermBias} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, longerTermBias: event.target.value as AnalysisFormState['longerTermBias'] }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="none">None</option></select></label>
+                  <label>Trading style<select value={analysisForm.tradingStyle} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingStyle: event.target.value as AnalysisFormState['tradingStyle'] }))}><option value="trend">Trend</option><option value="consolidation">Consolidation</option></select></label>
+                </div>
+              </>
+            )}
           </section>
           <section className="analysis-pdf-section">
             <div className="collapsible-header analysis-pdf-header analysis-pdf-header-black">
@@ -1093,15 +1230,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
               </button>
             </div>
             {analysisSectionOpen.tradingNotes && (
-              <>
-                <div className="grid-3">
-                  <div className="radio-inline"><span>Has a clear trend</span><label><input type="radio" name="analysisHasTrend" checked={analysisForm.hasClearTrend} onChange={() => setAnalysisForm((prev) => ({ ...prev, hasClearTrend: true }))} /> Yes</label><label><input type="radio" name="analysisHasTrend" checked={!analysisForm.hasClearTrend} onChange={() => setAnalysisForm((prev) => ({ ...prev, hasClearTrend: false }))} /> No</label></div>
-                  <label>Current trend<select value={analysisForm.currentTrend} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, currentTrend: event.target.value as AnalysisFormState['currentTrend'] }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="consolidation">Consolidation</option><option value="none">None</option></select></label>
-                  <label>Directional bias<select value={analysisForm.directionalBias} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, directionalBias: event.target.value as AnalysisFormState['directionalBias'] }))}><option value="bullish">Bullish</option><option value="bearish">Bearish</option><option value="none">None</option></select></label>
-                  <label>Trading style<select value={analysisForm.tradingStyle} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingStyle: event.target.value as AnalysisFormState['tradingStyle'] }))}><option value="trend">Trend</option><option value="consolidation">Consolidation</option></select></label>
-                </div>
-                <label>Trading notes<textarea rows={2} value={analysisForm.tradingNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingNotes: event.target.value }))} /></label>
-              </>
+              <label>Trading notes<textarea rows={5} value={analysisForm.tradingNotes} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, tradingNotes: event.target.value }))} /></label>
             )}
           </section>
           <section className="analysis-pdf-section">
@@ -1142,18 +1271,45 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
               </button>
             </div>
             {analysisSectionOpen.marketStructure && (
-              <div className="market-structure-grid">
-                {analysisForm.marketStructure.map((row, index) => (
-                  <div key={`${row.rangeName}-${index}`} className="market-structure-row">
-                    <span>{row.rangeName}</span>
-                    <div className="radio-inline compact">
-                      <label><input type="radio" name={`analysis-market-structure-${index}`} checked={row.bias === 'buy'} onChange={() => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, bias: 'buy' } : entry)) }))} /> Buy</label>
-                      <label><input type="radio" name={`analysis-market-structure-${index}`} checked={row.bias === 'sell'} onChange={() => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, bias: 'sell' } : entry)) }))} /> Sell</label>
-                      <label><input type="radio" name={`analysis-market-structure-${index}`} checked={row.bias === 'none'} onChange={() => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, bias: 'none' } : entry)) }))} /> None</label>
-                    </div>
-                    <input placeholder="Level" value={row.level} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, level: event.target.value } : entry)) }))} />
-                  </div>
-                ))}
+              <div className="history-table-wrapper market-structure-wrapper">
+                <table className="history-table market-structure-table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Range</th>
+                      <th>Price</th>
+                      <th>Buy confluences</th>
+                      <th>Sell confluences</th>
+                      <th>Zone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysisForm.marketStructure.map((row, index) => (
+                      <tr key={`${row.rangeName}-${index}`}>
+                        <td>
+                          <select value={row.tag} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, tag: event.target.value as AnalysisFormState['marketStructure'][number]['tag'] } : entry)) }))}>
+                            <option value="pivot">Pivot</option>
+                            <option value="pdh">PDH</option>
+                            <option value="resistance">Resistance</option>
+                            <option value="support">Support</option>
+                            <option value="pdl">PDL</option>
+                          </select>
+                        </td>
+                        <td>{row.rangeName}</td>
+                        <td><input value={row.level} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, level: event.target.value } : entry)) }))} /></td>
+                        <td><input value={row.buyConfluences} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, buyConfluences: event.target.value } : entry)) }))} /></td>
+                        <td><input value={row.sellConfluences} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, sellConfluences: event.target.value } : entry)) }))} /></td>
+                        <td className={`zone-band-cell zone-band-${row.zoneBand}`}>
+                          <select value={row.zoneBand} onChange={(event) => setAnalysisForm((prev) => ({ ...prev, marketStructure: prev.marketStructure.map((entry, entryIndex) => (entryIndex === index ? { ...entry, zoneBand: event.target.value as ZoneBand } : entry)) }))}>
+                            <option value="sell">Sell zone</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="buy">Buy zone</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </section>
@@ -1179,11 +1335,10 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         tradingAsset: item.tradingAsset,
         tradeSide: item.tradeSide ?? 'buy',
         strategy: item.strategy,
+        lotSize: toInputString(item.lotSize),
         confluences: item.confluences && item.confluences.length > 0 ? item.confluences.slice(0, 5) : [''],
         entryPrice: toInputString(item.entryPrice),
-        riskRewardRatio: toInputString(item.riskRewardRatio),
         stopLossPrice: toInputString(item.stopLossPrice),
-        takeProfitPrice: toInputString(item.takeProfitPrice),
         exitPrice: toInputString(item.exitPrice),
         feelings: item.feelings as TradeLogFormState['feelings'] ?? 'Not filled',
         comments: item.comments ?? '',
@@ -1222,13 +1377,10 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       tradingAsset: tradeForm.tradingAsset,
       tradeSide: tradeForm.tradeSide,
       strategy: tradeForm.strategy,
+      lotSize: toNumberOrUndefined(tradeForm.lotSize),
       confluences: tradeForm.confluences.map((entry) => entry.trim()).filter((entry) => entry.length > 0),
       entryPrice: entryPriceValue,
-      riskRewardRatio: toNumberOrUndefined(tradeForm.riskRewardRatio),
       stopLossPrice: stopLossPriceValue,
-      takeProfitPrice: takeProfitPriceValue,
-      estimatedLoss: estimatedLossValue,
-      estimatedProfit: estimatedProfitValue,
       exitPrice: exitPriceValue,
       totalProfit: tradeProfitValue,
       feelings: tradeForm.feelings,
@@ -1774,7 +1926,17 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 <div className="panel-header">
                   <h3>Market Analysis</h3>
                   <div className="inline-actions">
-                    <span>{editingAnalysis ? 'Captured for this day' : 'Not captured yet'}</span>
+                    <span>Captured {capturedMarketAnalysisCount}/3</span>
+                    {marketAnalysisSessionOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        className={selectedMarketAnalysisSession === option.key ? 'tab active' : 'tab'}
+                        onClick={() => setSelectedMarketAnalysisSession(option.key)}
+                      >
+                        {option.label} {analysesBySession[option.key] ? '✓' : ''}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       className="icon-button collapse-icon-button"
@@ -1814,7 +1976,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 {tradingDaySectionOpen.trades && (
                   <div className="history-table-wrapper">
                     <table className="history-table">
-                      <thead><tr><th>Date</th><th>Time</th><th>Session</th><th>Asset</th><th>Side</th><th>Strategy</th><th>Profit</th><th>Chart</th><th /></tr></thead>
+                      <thead><tr><th>Date</th><th>Time</th><th>Session</th><th>Asset</th><th>Side</th><th>Strategy</th><th>Lot size</th><th>Profit</th><th>Chart</th><th /></tr></thead>
                       <tbody>
                         {dayTrades.map((trade) => (
                           <tr key={trade.id}>
@@ -1824,6 +1986,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td>{trade.tradingAsset}</td>
                             <td>{trade.tradeSide ?? '-'}</td>
                             <td>{trade.strategy ?? '-'}</td>
+                            <td>{trade.lotSize ?? '-'}</td>
                             <td>{toFixed2OrDash(trade.totalProfit)}</td>
                             <td>
                               {trade.chartLink ? (
@@ -1837,7 +2000,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td><button type="button" className="ghost" onClick={() => openTradeDialog(trade)}>View / Edit</button></td>
                           </tr>
                         ))}
-                        {dayTrades.length === 0 && <tr><td colSpan={9}>No trades yet for this day.</td></tr>}
+                        {dayTrades.length === 0 && <tr><td colSpan={10}>No trades yet for this day.</td></tr>}
                       </tbody>
                     </table>
                   </div>
@@ -1864,16 +2027,11 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                     <label>Asset<input value={tradeForm.tradingAsset} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradingAsset: event.target.value }))} required /></label>
                     <label>Buy / Sell<select value={tradeForm.tradeSide} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeSide: event.target.value as TradeLogFormState['tradeSide'] }))}><option value="buy">Buy</option><option value="sell">Sell</option></select></label>
                     <label>Strategy<input value={tradeForm.strategy} onChange={(event) => setTradeForm((prev) => ({ ...prev, strategy: event.target.value }))} required /></label>
-                    <label>R/R (1:X)<input type="number" step="0.01" value={tradeForm.riskRewardRatio} onChange={(event) => setTradeForm((prev) => ({ ...prev, riskRewardRatio: event.target.value }))} /></label>
+                    <label>Lot size<input type="number" step="0.01" min="0" value={tradeForm.lotSize} onChange={(event) => setTradeForm((prev) => ({ ...prev, lotSize: event.target.value }))} /></label>
                   </div>
                   <div className="grid-3">
                     <label>Entry price<input type="number" step="0.01" value={tradeForm.entryPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, entryPrice: event.target.value }))} /></label>
                     <label>Stop loss price<input type="number" step="0.01" value={tradeForm.stopLossPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, stopLossPrice: event.target.value }))} /></label>
-                    <label>Take profit price<input type="number" step="0.01" value={tradeForm.takeProfitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, takeProfitPrice: event.target.value }))} /></label>
-                  </div>
-                  <div className="grid-3">
-                    <label>Estimated loss (auto)<input readOnly value={toFixed2OrEmpty(estimatedLossValue)} /></label>
-                    <label>Estimated profit (auto)<input readOnly value={toFixed2OrEmpty(estimatedProfitValue)} /></label>
                     <label>Exit price<input type="number" step="0.01" value={tradeForm.exitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, exitPrice: event.target.value }))} /></label>
                   </div>
                   <div className="grid-3">

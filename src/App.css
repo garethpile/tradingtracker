@@ -394,10 +394,40 @@ fieldset {
 .analysis-pdf-table label,
 .analysis-pdf-section .grid-3,
 .analysis-pdf-section .grid-2,
-.analysis-pdf-section .market-structure-grid,
 .analysis-pdf-section .analysis-column-totals,
 .analysis-pdf-section .radio-inline {
   padding: 0.6rem 0.75rem;
+}
+
+.analysis-price-table {
+  border-top: 1px solid #cbcfd6;
+  border-left: 1px solid #cbcfd6;
+  border-right: 1px solid #cbcfd6;
+  margin: 0.6rem 0.75rem;
+}
+
+.analysis-price-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) 1fr 0.6fr;
+  align-items: center;
+  border-bottom: 1px solid #cbcfd6;
+}
+
+.analysis-price-row span {
+  padding: 0.55rem 0.6rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-right: 1px solid #cbcfd6;
+}
+
+.analysis-price-row input {
+  border: 0;
+  border-right: 1px solid #cbcfd6;
+  min-height: 42px;
+}
+
+.analysis-price-row input:last-child {
+  border-right: 0;
 }
 
 .analysis-choice-grid {
@@ -546,6 +576,38 @@ fieldset {
   border: 1px solid #cbcfd6;
   padding: 0.45rem 0.55rem;
   background: #fff;
+}
+
+.market-structure-wrapper {
+  margin: 0.7rem 0.75rem;
+}
+
+.market-structure-table th,
+.market-structure-table td {
+  text-transform: uppercase;
+  font-size: 0.82rem;
+}
+
+.market-structure-table td input,
+.market-structure-table td select {
+  width: 100%;
+  min-height: 34px;
+}
+
+.market-structure-table td:nth-child(1) select {
+  font-weight: 700;
+}
+
+.zone-band-cell.zone-band-sell {
+  background: #ffdddd;
+}
+
+.zone-band-cell.zone-band-neutral {
+  background: #ececec;
+}
+
+.zone-band-cell.zone-band-buy {
+  background: #dbdbff;
 }
 
 .history-table-wrapper {

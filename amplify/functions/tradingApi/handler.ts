@@ -30,8 +30,9 @@ type ChecklistPayload = {
 };
 
 type AnalysisDirection = 'bullish' | 'bearish' | 'consolidation' | 'none';
-type MarketStructureBias = 'buy' | 'sell' | 'none';
 type Impact = 'high' | 'low';
+type TrendBias = 'bullish' | 'bearish' | 'consolidation' | 'none';
+type ZoneBand = 'sell' | 'neutral' | 'buy';
 
 type MarketAnalysisPayload = {
   dayId?: string;
@@ -57,15 +58,22 @@ type MarketAnalysisPayload = {
   currentDayLow?: string;
   currentDayHigh?: string;
   futuresPrice?: string;
+  prevVolatility?: string;
+  currentVolatility?: string;
+  futuresVolatility?: string;
   priceActionNotes?: string;
   redFolderNews: boolean;
   newsImpact: Impact;
   newsTime?: string;
+  newsTimes?: string;
   newsNotes?: string;
+  expectedVolatility?: string;
   sellRsiLevel?: string;
   buyRsiLevel?: string;
   hasClearTrend: boolean;
   currentTrend: AnalysisDirection;
+  shortTermBias?: TrendBias;
+  longerTermBias?: TrendBias;
   directionalBias: 'bullish' | 'bearish' | 'none';
   tradingStyle: 'trend' | 'consolidation';
   tradingNotes?: string;
@@ -80,9 +88,13 @@ type MarketAnalysisPayload = {
   swingZone1?: string;
   swingZone2?: string;
   marketStructure: Array<{
+    tag?: 'pivot' | 'pdh' | 'resistance' | 'support' | 'pdl';
     rangeName: string;
-    bias: MarketStructureBias;
+    bias?: 'buy' | 'sell' | 'none';
     level?: string;
+    buyConfluences?: string;
+    sellConfluences?: string;
+    zoneBand?: ZoneBand;
   }>;
 };
 
@@ -92,6 +104,7 @@ type TradeLogPayload = {
   sessionName?: string;
   tradingAsset: string;
   strategy: string;
+  lotSize?: number;
   confluences?: string[];
   entryPrice?: number;
   riskRewardRatio?: number;
@@ -131,6 +144,7 @@ type SessionTradePayload = {
   tradeTime?: string;
   tradingAsset: string;
   strategy: string;
+  lotSize?: number;
   confluences?: string[];
   entryPrice?: number;
   riskRewardRatio?: number;
@@ -161,6 +175,17 @@ const baseConfluenceFallback = [
   'MACD - Histogram expanding in dorection of trade',
 ];
 const baseConfluenceUserId = '__BASE_CONFLUENCES__';
+
+const normalizeAnalysisSessionName = (sessionName?: string): string => {
+  const normalized = String(sessionName ?? '').trim().toLowerCase();
+  if (normalized.includes('asia')) {
+    return 'asian';
+  }
+  if (normalized.includes('new york') || normalized === 'us session' || normalized === 'us') {
+    return 'us';
+  }
+  return 'london';
+};
 
 const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   statusCode,
@@ -262,7 +287,7 @@ const scoreAnalysis = (item: MarketAnalysisPayload): number => {
     item.tradingDate,
     item.sessionName,
     item.conclusion,
-    item.newsTime ?? '',
+    item.newsTimes ?? item.newsTime ?? '',
     item.sellRsiLevel ?? '',
     item.buyRsiLevel ?? '',
   ];
@@ -281,9 +306,14 @@ const scoreAnalysis = (item: MarketAnalysisPayload): number => {
   ];
   const filledZones = zoneFields.filter((field) => (field ?? '').trim().length > 0).length;
 
-  const marketStructureSet = item.marketStructure.filter(
-    (row) => row.bias !== 'none' || (row.level ?? '').trim().length > 0,
-  ).length;
+  const marketStructureSet = item.marketStructure.filter((row) => {
+    const legacyBiasSet = row.bias && row.bias !== 'none';
+    const zoneBandSet = row.zoneBand && row.zoneBand !== 'neutral';
+    const levelSet = (row.level ?? '').trim().length > 0;
+    const buySet = (row.buyConfluences ?? '').trim().length > 0;
+    const sellSet = (row.sellConfluences ?? '').trim().length > 0;
+    return Boolean(legacyBiasSet || zoneBandSet || levelSet || buySet || sellSet);
+  }).length;
 
   const weightedScore =
     (filledDirectional / sentimentFields.length) * 40
@@ -783,16 +813,20 @@ export const handler = async (
     const existingId = event.queryStringParameters?.id;
     const isUpdate = Boolean(existingCreatedAt && existingId);
 
-    if (!isUpdate && payload.dayId) {
+    if (payload.dayId) {
       const allItems = await getAllUserItems(userSub);
-      const existingForDay = allItems.find(
-        (item) => item.itemType === 'MARKET_ANALYSIS' && String(item.dayId ?? '') === String(payload.dayId),
+      const currentSession = normalizeAnalysisSessionName(payload.sessionName);
+      const existingForSession = allItems.find(
+        (item) => item.itemType === 'MARKET_ANALYSIS'
+          && String(item.dayId ?? '') === String(payload.dayId)
+          && normalizeAnalysisSessionName(String(item.sessionName ?? '')) === currentSession
+          && (!isUpdate || String(item.id ?? '') !== String(existingId ?? '')),
       );
-      if (existingForDay) {
+      if (existingForSession) {
         return json(409, {
-          message: 'Market analysis already exists for this trading day',
-          id: String(existingForDay.id ?? ''),
-          createdAt: String(existingForDay.createdAt ?? ''),
+          message: 'Market analysis already exists for this session on this trading day',
+          id: String(existingForSession.id ?? ''),
+          createdAt: String(existingForSession.createdAt ?? ''),
         });
       }
     }
