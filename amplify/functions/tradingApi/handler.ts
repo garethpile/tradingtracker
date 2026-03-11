@@ -104,6 +104,7 @@ type TradeLogPayload = {
   sessionName?: string;
   tradingAsset: string;
   strategy: string;
+  tradeSide?: 'buy' | 'sell';
   lotSize?: number;
   confluences?: string[];
   entryPrice?: number;
@@ -144,6 +145,7 @@ type SessionTradePayload = {
   tradeTime?: string;
   tradingAsset: string;
   strategy: string;
+  tradeSide?: 'buy' | 'sell';
   lotSize?: number;
   confluences?: string[];
   entryPrice?: number;
@@ -465,7 +467,13 @@ const toNumber = (value: unknown): number | null => {
   return null;
 };
 
-const tradeDirectionIsBuy = (entryPrice?: number, takeProfitPrice?: number): boolean => {
+const tradeDirectionIsBuy = (entryPrice?: number, takeProfitPrice?: number, tradeSide?: 'buy' | 'sell'): boolean => {
+  if (tradeSide === 'buy') {
+    return true;
+  }
+  if (tradeSide === 'sell') {
+    return false;
+  }
   if (entryPrice === undefined || takeProfitPrice === undefined) {
     return true;
   }
@@ -487,7 +495,7 @@ const calculateTradeDerivedValues = (payload: TradeLogPayload) => {
     : undefined;
 
   const tradeProfit = entry !== undefined && exit !== undefined
-    ? Number((tradeDirectionIsBuy(entry, take) ? exit - entry : entry - exit).toFixed(2))
+    ? Number((tradeDirectionIsBuy(entry, take, payload.tradeSide) ? exit - entry : entry - exit).toFixed(2))
     : payload.totalProfit;
 
   return { estimatedLoss, estimatedProfit, tradeProfit };

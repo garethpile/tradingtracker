@@ -534,6 +534,11 @@ const computeTradeProfit = (
   return Number(raw.toFixed(2));
 };
 
+const getDisplayedTradeProfit = (trade: TradeLogItem): number | undefined => {
+  const recomputed = computeTradeProfit(trade.entryPrice, trade.exitPrice, trade.tradeSide ?? 'buy');
+  return recomputed ?? trade.totalProfit;
+};
+
 const buildAuthHeader = async () => {
   const session = await fetchAuthSession();
   const token = session.tokens?.idToken?.toString();
@@ -1987,7 +1992,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td>{trade.tradeSide ?? '-'}</td>
                             <td>{trade.strategy ?? '-'}</td>
                             <td>{trade.lotSize ?? '-'}</td>
-                            <td>{toFixed2OrDash(trade.totalProfit)}</td>
+                            <td>{toFixed2OrDash(getDisplayedTradeProfit(trade))}</td>
                             <td>
                               {trade.chartLink ? (
                                 <a href={trade.chartLink} target="_blank" rel="noreferrer">Open link</a>
