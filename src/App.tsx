@@ -105,11 +105,19 @@ type TradeLogFormState = {
   tradingAsset: string;
   tradeSide: 'buy' | 'sell';
   strategy: string;
-  lotSize: string;
   confluences: string[];
-  entryPrice: string;
-  stopLossPrice: string;
-  exitPrice: string;
+  tradeEntries: Array<{
+    id: string;
+    lotSize: string;
+    entryPrice: string;
+    stopLossPrice: string;
+    exitPrice: string;
+    takeProfits: Array<{
+      id: string;
+      lotSize: string;
+      takeProfitPrice: string;
+    }>;
+  }>;
   feelings: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments: string;
   chartLink: string;
@@ -134,6 +142,18 @@ type TradeLogItem = {
   estimatedLoss?: number;
   estimatedProfit?: number;
   exitPrice?: number;
+  tradeEntries?: Array<{
+    id?: string;
+    lotSize?: number;
+    entryPrice?: number;
+    stopLossPrice?: number;
+    exitPrice?: number;
+    takeProfits?: Array<{
+      id?: string;
+      lotSize?: number;
+      takeProfitPrice?: number;
+    }>;
+  }>;
   totalProfit?: number;
   feelings?: string;
   comments?: string;
@@ -224,11 +244,23 @@ const defaultTradeForm = (): TradeLogFormState => ({
   tradingAsset: 'XAUUSD',
   tradeSide: 'buy',
   strategy: '',
-  lotSize: '',
   confluences: [''],
-  entryPrice: '',
-  stopLossPrice: '',
-  exitPrice: '',
+  tradeEntries: [
+    {
+      id: crypto.randomUUID(),
+      lotSize: '',
+      entryPrice: '',
+      stopLossPrice: '',
+      exitPrice: '',
+      takeProfits: [
+        {
+          id: crypto.randomUUID(),
+          lotSize: '',
+          takeProfitPrice: '',
+        },
+      ],
+    },
+  ],
   feelings: 'Not filled',
   comments: '',
   chartLink: '',
@@ -534,7 +566,84 @@ const computeTradeProfit = (
   return Number(raw.toFixed(2));
 };
 
+const toLotMultiplier = (lotSize?: number): number => {
+  if (lotSize === undefined || !Number.isFinite(lotSize) || lotSize <= 0) {
+    return 1;
+  }
+
+  return lotSize / 0.01;
+};
+
+const computeTradeEntryProfit = (
+  tradeEntry: TradeLogFormState['tradeEntries'][number] | NonNullable<TradeLogItem['tradeEntries']>[number],
+  tradeSide: 'buy' | 'sell' = 'buy',
+): number | undefined => {
+  const entry = toNumberOrUndefined(String(tradeEntry?.entryPrice ?? ''));
+  if (entry === undefined) {
+    return undefined;
+  }
+
+  let realized = 0;
+  let usedLots = 0;
+  const tradeLot = toNumberOrUndefined(String(tradeEntry?.lotSize ?? ''));
+  const tpLegs = Array.isArray(tradeEntry?.takeProfits) ? tradeEntry.takeProfits : [];
+
+  tpLegs.forEach((tp: TradeLogFormState['tradeEntries'][number]['takeProfits'][number] | NonNullable<NonNullable<TradeLogItem['tradeEntries']>[number]['takeProfits']>[number]) => {
+    const tpPrice = toNumberOrUndefined(String(tp?.takeProfitPrice ?? ''));
+    const tpLot = toNumberOrUndefined(String(tp?.lotSize ?? ''));
+    if (tpPrice === undefined || tpLot === undefined || tpLot <= 0) {
+      return;
+    }
+    const move = tradeSide === 'buy' ? tpPrice - entry : entry - tpPrice;
+    realized += move * toLotMultiplier(tpLot);
+    usedLots += tpLot;
+  });
+
+  const exit = toNumberOrUndefined(String(tradeEntry?.exitPrice ?? ''));
+  const remainingLots = tradeLot !== undefined && tradeLot > 0 ? Math.max(tradeLot - usedLots, 0) : 0;
+  if (exit !== undefined && remainingLots > 0) {
+    const move = tradeSide === 'buy' ? exit - entry : entry - exit;
+    realized += move * toLotMultiplier(remainingLots);
+    usedLots += remainingLots;
+  }
+
+  if (usedLots === 0 && exit !== undefined) {
+    const move = tradeSide === 'buy' ? exit - entry : entry - exit;
+    realized += move * toLotMultiplier(tradeLot);
+    usedLots = tradeLot ?? 0.01;
+  }
+
+  if (usedLots === 0) {
+    return undefined;
+  }
+
+  return Number(realized.toFixed(2));
+};
+
+const computeTradeSetProfit = (
+  tradeEntries: TradeLogFormState['tradeEntries'] | TradeLogItem['tradeEntries'],
+  tradeSide: 'buy' | 'sell' = 'buy',
+): number | undefined => {
+  if (!tradeEntries || tradeEntries.length === 0) {
+    return undefined;
+  }
+
+  const profits = tradeEntries
+    .map((entry) => computeTradeEntryProfit(entry, tradeSide))
+    .filter((value): value is number => value !== undefined);
+
+  if (profits.length === 0) {
+    return undefined;
+  }
+
+  return Number(profits.reduce((sum, value) => sum + value, 0).toFixed(2));
+};
+
 const getDisplayedTradeProfit = (trade: TradeLogItem): number | undefined => {
+  const setProfit = computeTradeSetProfit(trade.tradeEntries, trade.tradeSide ?? 'buy');
+  if (setProfit !== undefined) {
+    return setProfit;
+  }
   const recomputed = computeTradeProfit(trade.entryPrice, trade.exitPrice, trade.tradeSide ?? 'buy');
   return recomputed ?? trade.totalProfit;
 };
@@ -662,10 +771,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       .sort((a, b) => a.localeCompare(b));
   }, [confluenceItems]);
 
-  const entryPriceValue = toNumberOrUndefined(tradeForm.entryPrice);
-  const stopLossPriceValue = toNumberOrUndefined(tradeForm.stopLossPrice);
-  const exitPriceValue = toNumberOrUndefined(tradeForm.exitPrice);
-  const tradeProfitValue = computeTradeProfit(entryPriceValue, exitPriceValue, tradeForm.tradeSide);
+  const tradeProfitValue = computeTradeSetProfit(tradeForm.tradeEntries, tradeForm.tradeSide);
   const selectedTradingDay = useMemo(
     () => tradingDays.find((item) => item.id === selectedTradingDayId) ?? null,
     [tradingDays, selectedTradingDayId],
@@ -1330,6 +1436,36 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     </form>
   );
 
+  const buildTradeEntriesFromItem = (item: SessionTradeItem): TradeLogFormState['tradeEntries'] => {
+    if (item.tradeEntries && item.tradeEntries.length > 0) {
+      return item.tradeEntries.map((entry) => ({
+        id: entry.id ?? crypto.randomUUID(),
+        lotSize: toInputString(entry.lotSize),
+        entryPrice: toInputString(entry.entryPrice),
+        stopLossPrice: toInputString(entry.stopLossPrice),
+        exitPrice: toInputString(entry.exitPrice),
+        takeProfits: (entry.takeProfits ?? []).length > 0
+          ? (entry.takeProfits ?? []).map((tp) => ({
+            id: tp.id ?? crypto.randomUUID(),
+            lotSize: toInputString(tp.lotSize),
+            takeProfitPrice: toInputString(tp.takeProfitPrice),
+          }))
+          : [{ id: crypto.randomUUID(), lotSize: '', takeProfitPrice: '' }],
+      }));
+    }
+
+    return [{
+      id: crypto.randomUUID(),
+      lotSize: toInputString(item.lotSize),
+      entryPrice: toInputString(item.entryPrice),
+      stopLossPrice: toInputString(item.stopLossPrice),
+      exitPrice: toInputString(item.exitPrice),
+      takeProfits: item.takeProfitPrice !== undefined
+        ? [{ id: crypto.randomUUID(), lotSize: toInputString(item.lotSize), takeProfitPrice: toInputString(item.takeProfitPrice) }]
+        : [{ id: crypto.randomUUID(), lotSize: '', takeProfitPrice: '' }],
+    }];
+  };
+
   const openTradeDialog = (item?: SessionTradeItem) => {
     if (item) {
       setEditingSessionTrade({ id: item.id, createdAt: item.createdAt });
@@ -1340,11 +1476,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         tradingAsset: item.tradingAsset,
         tradeSide: item.tradeSide ?? 'buy',
         strategy: item.strategy,
-        lotSize: toInputString(item.lotSize),
         confluences: item.confluences && item.confluences.length > 0 ? item.confluences.slice(0, 5) : [''],
-        entryPrice: toInputString(item.entryPrice),
-        stopLossPrice: toInputString(item.stopLossPrice),
-        exitPrice: toInputString(item.exitPrice),
+        tradeEntries: buildTradeEntriesFromItem(item),
         feelings: item.feelings as TradeLogFormState['feelings'] ?? 'Not filled',
         comments: item.comments ?? '',
         chartLink: item.chartLink ?? '',
@@ -1382,11 +1515,24 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       tradingAsset: tradeForm.tradingAsset,
       tradeSide: tradeForm.tradeSide,
       strategy: tradeForm.strategy,
-      lotSize: toNumberOrUndefined(tradeForm.lotSize),
       confluences: tradeForm.confluences.map((entry) => entry.trim()).filter((entry) => entry.length > 0),
-      entryPrice: entryPriceValue,
-      stopLossPrice: stopLossPriceValue,
-      exitPrice: exitPriceValue,
+      lotSize: toNumberOrUndefined(tradeForm.tradeEntries[0]?.lotSize ?? ''),
+      entryPrice: toNumberOrUndefined(tradeForm.tradeEntries[0]?.entryPrice ?? ''),
+      stopLossPrice: toNumberOrUndefined(tradeForm.tradeEntries[0]?.stopLossPrice ?? ''),
+      takeProfitPrice: toNumberOrUndefined(tradeForm.tradeEntries[0]?.takeProfits[0]?.takeProfitPrice ?? ''),
+      exitPrice: toNumberOrUndefined(tradeForm.tradeEntries[0]?.exitPrice ?? ''),
+      tradeEntries: tradeForm.tradeEntries.map((entry) => ({
+        id: entry.id,
+        lotSize: toNumberOrUndefined(entry.lotSize),
+        entryPrice: toNumberOrUndefined(entry.entryPrice),
+        stopLossPrice: toNumberOrUndefined(entry.stopLossPrice),
+        exitPrice: toNumberOrUndefined(entry.exitPrice),
+        takeProfits: entry.takeProfits.map((tp) => ({
+          id: tp.id,
+          lotSize: toNumberOrUndefined(tp.lotSize),
+          takeProfitPrice: toNumberOrUndefined(tp.takeProfitPrice),
+        })),
+      })),
       totalProfit: tradeProfitValue,
       feelings: tradeForm.feelings,
       comments: tradeForm.comments,
@@ -1960,9 +2106,9 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
 
               <article className="confluence-manage-card">
                 <div className="panel-header">
-                  <h3>Trades</h3>
+                  <h3>Trade Sets</h3>
                   <div className="inline-actions">
-                    <button type="button" className="icon-button add-icon-button" onClick={() => openTradeDialog()} title="Add trade" aria-label="Add trade">
+                    <button type="button" className="icon-button add-icon-button" onClick={() => openTradeDialog()} title="Add trade set" aria-label="Add trade set">
                       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M11 5h2v14h-2zM5 11h14v2H5z" fill="currentColor" /></svg>
                     </button>
                     <button
@@ -1981,7 +2127,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 {tradingDaySectionOpen.trades && (
                   <div className="history-table-wrapper">
                     <table className="history-table">
-                      <thead><tr><th>Date</th><th>Time</th><th>Session</th><th>Asset</th><th>Side</th><th>Strategy</th><th>Lot size</th><th>Profit</th><th>Chart</th><th /></tr></thead>
+                      <thead><tr><th>Date</th><th>Time</th><th>Session</th><th>Asset</th><th>Side</th><th>Strategy</th><th>Trades</th><th>Profit</th><th>Chart</th><th /></tr></thead>
                       <tbody>
                         {dayTrades.map((trade) => (
                           <tr key={trade.id}>
@@ -1991,7 +2137,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td>{trade.tradingAsset}</td>
                             <td>{trade.tradeSide ?? '-'}</td>
                             <td>{trade.strategy ?? '-'}</td>
-                            <td>{trade.lotSize ?? '-'}</td>
+                            <td>{trade.tradeEntries?.length ?? 1}</td>
                             <td>{toFixed2OrDash(getDisplayedTradeProfit(trade))}</td>
                             <td>
                               {trade.chartLink ? (
@@ -2005,7 +2151,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td><button type="button" className="ghost" onClick={() => openTradeDialog(trade)}>View / Edit</button></td>
                           </tr>
                         ))}
-                        {dayTrades.length === 0 && <tr><td colSpan={10}>No trades yet for this day.</td></tr>}
+                        {dayTrades.length === 0 && <tr><td colSpan={10}>No trade sets yet for this day.</td></tr>}
                       </tbody>
                     </table>
                   </div>
@@ -2019,12 +2165,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             <div className="dialog-backdrop" role="dialog" aria-modal="true">
               <div className="dialog-card">
                 <div className="panel-header">
-                  <h3>{editingSessionTrade ? 'Manage Trade' : 'Create Trade'}</h3>
+                  <h3>{editingSessionTrade ? 'Manage Trade Set' : 'Create Trade Set'}</h3>
                   <button type="button" className="ghost" onClick={closeTradeDialog}>Close</button>
                 </div>
                 <form className="market-form" onSubmit={saveSessionTrade} onPaste={(event) => void handleChartImagePaste(event)}>
                   <fieldset>
-                    <legend>Trades</legend>
+                    <legend>Trade Set</legend>
                   <div className="grid-3">
                     <label>Date<input type="date" value={tradeForm.tradeDate} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeDate: event.target.value }))} required /></label>
                     <label>Time<input type="time" value={tradeForm.tradeTime} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeTime: event.target.value }))} /></label>
@@ -2032,17 +2178,83 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                     <label>Asset<input value={tradeForm.tradingAsset} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradingAsset: event.target.value }))} required /></label>
                     <label>Buy / Sell<select value={tradeForm.tradeSide} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeSide: event.target.value as TradeLogFormState['tradeSide'] }))}><option value="buy">Buy</option><option value="sell">Sell</option></select></label>
                     <label>Strategy<input value={tradeForm.strategy} onChange={(event) => setTradeForm((prev) => ({ ...prev, strategy: event.target.value }))} required /></label>
-                    <label>Lot size<input type="number" step="0.01" min="0" value={tradeForm.lotSize} onChange={(event) => setTradeForm((prev) => ({ ...prev, lotSize: event.target.value }))} /></label>
-                  </div>
-                  <div className="grid-3">
-                    <label>Entry price<input type="number" step="0.01" value={tradeForm.entryPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, entryPrice: event.target.value }))} /></label>
-                    <label>Stop loss price<input type="number" step="0.01" value={tradeForm.stopLossPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, stopLossPrice: event.target.value }))} /></label>
-                    <label>Exit price<input type="number" step="0.01" value={tradeForm.exitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, exitPrice: event.target.value }))} /></label>
                   </div>
                   <div className="grid-3">
                     <label>Trade profit (auto)<input readOnly value={toFixed2OrEmpty(tradeProfitValue)} /></label>
                     <label>Feelings<select value={tradeForm.feelings} onChange={(event) => setTradeForm((prev) => ({ ...prev, feelings: event.target.value as TradeLogFormState['feelings'] }))}><option>Satisfied</option><option>Neutral</option><option>Disappointed</option><option>Not filled</option></select></label>
                   </div>
+                  <div className="trade-set-grid">
+                    {tradeForm.tradeEntries.map((entry, entryIndex) => (
+                      <section key={entry.id} className="trade-entry-card">
+                        <div className="panel-header">
+                          <h4>Trade {entryIndex + 1}</h4>
+                          <div className="inline-actions">
+                            <span>Profit: {toFixed2OrDash(computeTradeEntryProfit(entry, tradeForm.tradeSide))}</span>
+                            <button
+                              type="button"
+                              className="ghost"
+                              onClick={() => setTradeForm((prev) => ({
+                                ...prev,
+                                tradeEntries: prev.tradeEntries.filter((item) => item.id !== entry.id),
+                              }))}
+                              disabled={tradeForm.tradeEntries.length <= 1}
+                            >
+                              Remove trade
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid-4">
+                          <label>Lot size<input type="number" step="0.01" min="0" value={entry.lotSize} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, lotSize: event.target.value } : item)) }))} /></label>
+                          <label>Entry price<input type="number" step="0.01" value={entry.entryPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, entryPrice: event.target.value } : item)) }))} /></label>
+                          <label>Stop loss price<input type="number" step="0.01" value={entry.stopLossPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, stopLossPrice: event.target.value } : item)) }))} /></label>
+                          <label>Final exit price<input type="number" step="0.01" value={entry.exitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, exitPrice: event.target.value } : item)) }))} /></label>
+                        </div>
+                        <div className="trade-take-profit-list">
+                          {entry.takeProfits.map((tp, tpIndex) => (
+                            <div key={tp.id} className="trade-take-profit-row">
+                              <label>TP {tpIndex + 1} lot size<input type="number" step="0.01" min="0" value={tp.lotSize} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, takeProfits: item.takeProfits.map((takeProfit) => (takeProfit.id === tp.id ? { ...takeProfit, lotSize: event.target.value } : takeProfit)) } : item)) }))} /></label>
+                              <label>TP {tpIndex + 1} price<input type="number" step="0.01" value={tp.takeProfitPrice} onChange={(event) => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, takeProfits: item.takeProfits.map((takeProfit) => (takeProfit.id === tp.id ? { ...takeProfit, takeProfitPrice: event.target.value } : takeProfit)) } : item)) }))} /></label>
+                              <button
+                                type="button"
+                                className="ghost"
+                                onClick={() => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, takeProfits: item.takeProfits.filter((takeProfit) => takeProfit.id !== tp.id) } : item)) }))}
+                                disabled={entry.takeProfits.length <= 1}
+                              >
+                                Remove TP
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => setTradeForm((prev) => ({ ...prev, tradeEntries: prev.tradeEntries.map((item) => (item.id === entry.id ? { ...item, takeProfits: [...item.takeProfits, { id: crypto.randomUUID(), lotSize: '', takeProfitPrice: '' }] } : item)) }))}
+                        >
+                          Add take profit
+                        </button>
+                      </section>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => setTradeForm((prev) => ({
+                      ...prev,
+                      tradeEntries: [
+                        ...prev.tradeEntries,
+                        {
+                          id: crypto.randomUUID(),
+                          lotSize: '',
+                          entryPrice: '',
+                          stopLossPrice: '',
+                          exitPrice: '',
+                          takeProfits: [{ id: crypto.randomUUID(), lotSize: '', takeProfitPrice: '' }],
+                        },
+                      ],
+                    }))}
+                  >
+                    Add trade to set
+                  </button>
                   <label>
                     Confluences
                     <div className="confluences-list">

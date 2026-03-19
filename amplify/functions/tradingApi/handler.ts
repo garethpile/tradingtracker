@@ -114,6 +114,18 @@ type TradeLogPayload = {
   estimatedLoss?: number;
   estimatedProfit?: number;
   exitPrice?: number;
+  tradeEntries?: Array<{
+    id?: string;
+    lotSize?: number;
+    entryPrice?: number;
+    stopLossPrice?: number;
+    exitPrice?: number;
+    takeProfits?: Array<{
+      id?: string;
+      lotSize?: number;
+      takeProfitPrice?: number;
+    }>;
+  }>;
   totalProfit?: number;
   feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments?: string;
@@ -155,6 +167,18 @@ type SessionTradePayload = {
   estimatedLoss?: number;
   estimatedProfit?: number;
   exitPrice?: number;
+  tradeEntries?: Array<{
+    id?: string;
+    lotSize?: number;
+    entryPrice?: number;
+    stopLossPrice?: number;
+    exitPrice?: number;
+    takeProfits?: Array<{
+      id?: string;
+      lotSize?: number;
+      takeProfitPrice?: number;
+    }>;
+  }>;
   totalProfit?: number;
   feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments?: string;
@@ -327,16 +351,18 @@ const scoreAnalysis = (item: MarketAnalysisPayload): number => {
 };
 
 const scoreTradeLog = (item: TradeLogPayload): number => {
+  const primaryEntry = item.tradeEntries?.[0];
+  const primaryTp = primaryEntry?.takeProfits?.[0];
   const step1 = [
     item.tradeDate,
     item.tradeTime,
     item.tradingAsset,
     item.strategy,
     item.confluences && item.confluences.length > 0 ? item.confluences.join(',') : undefined,
-    item.entryPrice,
+    primaryEntry?.entryPrice ?? item.entryPrice,
     item.riskRewardRatio,
-    item.stopLossPrice,
-    item.takeProfitPrice,
+    primaryEntry?.stopLossPrice ?? item.stopLossPrice,
+    primaryTp?.takeProfitPrice ?? item.takeProfitPrice,
     item.estimatedLoss,
     item.estimatedProfit,
   ];
@@ -481,7 +507,79 @@ const tradeDirectionIsBuy = (entryPrice?: number, takeProfitPrice?: number, trad
   return takeProfitPrice >= entryPrice;
 };
 
+const toLotMultiplier = (lotSize?: number): number => {
+  if (lotSize === undefined || !Number.isFinite(lotSize) || lotSize <= 0) {
+    return 1;
+  }
+
+  return lotSize / 0.01;
+};
+
+const calculateTradeEntryProfit = (
+  entry: NonNullable<TradeLogPayload['tradeEntries']>[number],
+  tradeSide?: 'buy' | 'sell',
+): number | undefined => {
+  if (entry.entryPrice === undefined) {
+    return undefined;
+  }
+
+  let realized = 0;
+  let usedLots = 0;
+  const tradeLot = entry.lotSize;
+
+  for (const tp of entry.takeProfits ?? []) {
+    if (tp.takeProfitPrice === undefined || tp.lotSize === undefined || tp.lotSize <= 0) {
+      continue;
+    }
+    const move = tradeDirectionIsBuy(entry.entryPrice, tp.takeProfitPrice, tradeSide)
+      ? tp.takeProfitPrice - entry.entryPrice
+      : entry.entryPrice - tp.takeProfitPrice;
+    realized += move * toLotMultiplier(tp.lotSize);
+    usedLots += tp.lotSize;
+  }
+
+  const remainingLots = tradeLot !== undefined && tradeLot > 0 ? Math.max(tradeLot - usedLots, 0) : 0;
+  if (entry.exitPrice !== undefined && remainingLots > 0) {
+    const move = tradeDirectionIsBuy(entry.entryPrice, entry.exitPrice, tradeSide)
+      ? entry.exitPrice - entry.entryPrice
+      : entry.entryPrice - entry.exitPrice;
+    realized += move * toLotMultiplier(remainingLots);
+    usedLots += remainingLots;
+  }
+
+  if (usedLots === 0 && entry.exitPrice !== undefined) {
+    const move = tradeDirectionIsBuy(entry.entryPrice, entry.exitPrice, tradeSide)
+      ? entry.exitPrice - entry.entryPrice
+      : entry.entryPrice - entry.exitPrice;
+    realized += move * toLotMultiplier(tradeLot);
+    usedLots = tradeLot ?? 0.01;
+  }
+
+  if (usedLots === 0) {
+    return undefined;
+  }
+
+  return Number(realized.toFixed(2));
+};
+
 const calculateTradeDerivedValues = (payload: TradeLogPayload) => {
+  if (payload.tradeEntries && payload.tradeEntries.length > 0) {
+    const estimatedLoss = payload.tradeEntries[0]?.entryPrice !== undefined && payload.tradeEntries[0]?.stopLossPrice !== undefined
+      ? Number(Math.abs(payload.tradeEntries[0].entryPrice - payload.tradeEntries[0].stopLossPrice).toFixed(2))
+      : undefined;
+    const estimatedProfit = payload.tradeEntries[0]?.entryPrice !== undefined && payload.tradeEntries[0]?.takeProfits?.[0]?.takeProfitPrice !== undefined
+      ? Number(Math.abs(payload.tradeEntries[0].takeProfits[0].takeProfitPrice - payload.tradeEntries[0].entryPrice).toFixed(2))
+      : undefined;
+    const profits = payload.tradeEntries
+      .map((entry) => calculateTradeEntryProfit(entry, payload.tradeSide))
+      .filter((value): value is number => value !== undefined);
+    const tradeProfit = profits.length > 0
+      ? Number(profits.reduce((sum, value) => sum + value, 0).toFixed(2))
+      : payload.totalProfit;
+
+    return { estimatedLoss, estimatedProfit, tradeProfit };
+  }
+
   const entry = payload.entryPrice;
   const stop = payload.stopLossPrice;
   const take = payload.takeProfitPrice;

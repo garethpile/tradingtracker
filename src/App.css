@@ -807,6 +807,36 @@ fieldset {
   font-weight: 600;
 }
 
+.trade-set-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.trade-entry-card {
+  border: 1px solid #d9e4f7;
+  border-radius: 0.8rem;
+  padding: 0.8rem;
+  background: #fff;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.trade-entry-card h4 {
+  margin: 0;
+}
+
+.trade-take-profit-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.trade-take-profit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
 .history-table {
   width: 100%;
   border-collapse: collapse;
@@ -882,6 +912,10 @@ fieldset {
   }
 
   .trade-calc-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .trade-take-profit-row {
     grid-template-columns: 1fr;
   }
 
