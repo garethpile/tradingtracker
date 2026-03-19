@@ -515,6 +515,16 @@ const toLotMultiplier = (lotSize?: number): number => {
   return lotSize / 0.01;
 };
 
+const isPlausibleMarketPrice = (entryPrice?: number, candidatePrice?: number): boolean => {
+  if (entryPrice === undefined || candidatePrice === undefined) {
+    return false;
+  }
+
+  const lowerBound = Math.abs(entryPrice) * 0.5;
+  const upperBound = Math.abs(entryPrice) * 1.5;
+  return candidatePrice >= lowerBound && candidatePrice <= upperBound;
+};
+
 const calculateTradeEntryProfit = (
   entry: NonNullable<TradeLogPayload['tradeEntries']>[number],
   tradeSide?: 'buy' | 'sell',
@@ -528,7 +538,12 @@ const calculateTradeEntryProfit = (
   const tradeLot = entry.lotSize;
 
   for (const tp of entry.takeProfits ?? []) {
-    if (tp.takeProfitPrice === undefined || tp.lotSize === undefined || tp.lotSize <= 0) {
+    if (
+      tp.takeProfitPrice === undefined
+      || tp.lotSize === undefined
+      || tp.lotSize <= 0
+      || !isPlausibleMarketPrice(entry.entryPrice, tp.takeProfitPrice)
+    ) {
       continue;
     }
     const move = tradeDirectionIsBuy(entry.entryPrice, tp.takeProfitPrice, tradeSide)
@@ -567,7 +582,9 @@ const calculateTradeDerivedValues = (payload: TradeLogPayload) => {
     const estimatedLoss = payload.tradeEntries[0]?.entryPrice !== undefined && payload.tradeEntries[0]?.stopLossPrice !== undefined
       ? Number(Math.abs(payload.tradeEntries[0].entryPrice - payload.tradeEntries[0].stopLossPrice).toFixed(2))
       : undefined;
-    const estimatedProfit = payload.tradeEntries[0]?.entryPrice !== undefined && payload.tradeEntries[0]?.takeProfits?.[0]?.takeProfitPrice !== undefined
+    const estimatedProfit = payload.tradeEntries[0]?.entryPrice !== undefined
+      && payload.tradeEntries[0]?.takeProfits?.[0]?.takeProfitPrice !== undefined
+      && isPlausibleMarketPrice(payload.tradeEntries[0].entryPrice, payload.tradeEntries[0].takeProfits[0].takeProfitPrice)
       ? Number(Math.abs(payload.tradeEntries[0].takeProfits[0].takeProfitPrice - payload.tradeEntries[0].entryPrice).toFixed(2))
       : undefined;
     const profits = payload.tradeEntries

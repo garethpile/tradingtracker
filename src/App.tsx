@@ -574,6 +574,16 @@ const toLotMultiplier = (lotSize?: number): number => {
   return lotSize / 0.01;
 };
 
+const isPlausibleMarketPrice = (entry?: number, candidate?: number): boolean => {
+  if (entry === undefined || candidate === undefined) {
+    return false;
+  }
+
+  const lowerBound = Math.abs(entry) * 0.5;
+  const upperBound = Math.abs(entry) * 1.5;
+  return candidate >= lowerBound && candidate <= upperBound;
+};
+
 const computeTradeEntryProfit = (
   tradeEntry: TradeLogFormState['tradeEntries'][number] | NonNullable<TradeLogItem['tradeEntries']>[number],
   tradeSide: 'buy' | 'sell' = 'buy',
@@ -591,7 +601,7 @@ const computeTradeEntryProfit = (
   tpLegs.forEach((tp: TradeLogFormState['tradeEntries'][number]['takeProfits'][number] | NonNullable<NonNullable<TradeLogItem['tradeEntries']>[number]['takeProfits']>[number]) => {
     const tpPrice = toNumberOrUndefined(String(tp?.takeProfitPrice ?? ''));
     const tpLot = toNumberOrUndefined(String(tp?.lotSize ?? ''));
-    if (tpPrice === undefined || tpLot === undefined || tpLot <= 0) {
+    if (tpPrice === undefined || tpLot === undefined || tpLot <= 0 || !isPlausibleMarketPrice(entry, tpPrice)) {
       return;
     }
     const move = tradeSide === 'buy' ? tpPrice - entry : entry - tpPrice;
