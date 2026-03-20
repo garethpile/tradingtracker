@@ -8,6 +8,7 @@ import {
   DynamoDBDocumentClient,
   PutCommand,
   QueryCommand,
+  type QueryCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
@@ -408,18 +409,32 @@ const getStartIsoForDays = (days: number): string => {
 };
 
 const getAllUserItems = async (userId: string): Promise<Array<Record<string, unknown>>> => {
-  const result = await client.send(
-    new QueryCommand({
-      TableName: tableName,
-      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-        ':startIso': '0000-01-01T00:00:00.000Z',
-      },
-    }),
-  );
+  return queryAllItems({
+    TableName: tableName,
+    KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+    ExpressionAttributeValues: {
+      ':userId': userId,
+      ':startIso': '0000-01-01T00:00:00.000Z',
+    },
+  });
+};
 
-  return (result.Items ?? []) as Array<Record<string, unknown>>;
+const queryAllItems = async (input: QueryCommandInput): Promise<Array<Record<string, unknown>>> => {
+  const items: Array<Record<string, unknown>> = [];
+  let exclusiveStartKey = input.ExclusiveStartKey;
+
+  do {
+    const result = await client.send(
+      new QueryCommand({
+        ...input,
+        ExclusiveStartKey: exclusiveStartKey,
+      }),
+    );
+    items.push(...((result.Items ?? []) as Array<Record<string, unknown>>));
+    exclusiveStartKey = result.LastEvaluatedKey;
+  } while (exclusiveStartKey);
+
+  return items;
 };
 
 const getWeekEndingSunday = (value: string): string => {
@@ -438,8 +453,7 @@ const normalizeConfluenceName = (value: string): string =>
   value.trim().replace(/\s+/g, ' ').toLowerCase();
 
 const getOrSeedBaseConfluenceItems = async (): Promise<Array<Record<string, unknown>>> => {
-  const baseQuery = async () => client.send(
-    new QueryCommand({
+  const baseQuery = async () => queryAllItems({
       TableName: tableName,
       KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
       FilterExpression: 'itemType = :baseConfluenceItemType',
@@ -449,12 +463,11 @@ const getOrSeedBaseConfluenceItems = async (): Promise<Array<Record<string, unkn
         ':baseConfluenceItemType': 'BASE_CONFLUENCE',
       },
       ScanIndexForward: false,
-    }),
-  );
+    });
 
   const firstResult = await baseQuery();
-  if ((firstResult.Items ?? []).length > 0) {
-    return firstResult.Items ?? [];
+  if (firstResult.length > 0) {
+    return firstResult;
   }
 
   await Promise.all(
@@ -481,7 +494,7 @@ const getOrSeedBaseConfluenceItems = async (): Promise<Array<Record<string, unkn
   );
 
   const secondResult = await baseQuery();
-  return secondResult.Items ?? [];
+  return secondResult;
 };
 
 const toNumber = (value: unknown): number | null => {
@@ -1169,21 +1182,19 @@ export const handler = async (
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
-    const result = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'itemType = :dayItemType',
-        ExpressionAttributeValues: {
-          ':userId': userSub,
-          ':startIso': startIso,
-          ':dayItemType': 'TRADING_DAY',
-        },
-        ScanIndexForward: false,
-      }),
-    );
+    const items = await queryAllItems({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'itemType = :dayItemType',
+      ExpressionAttributeValues: {
+        ':userId': userSub,
+        ':startIso': startIso,
+        ':dayItemType': 'TRADING_DAY',
+      },
+      ScanIndexForward: false,
+    });
 
-    return json(200, { items: result.Items ?? [] });
+    return json(200, { items });
   }
 
   if (routeKey.endsWith('PUT /trading-days')) {
@@ -1630,21 +1641,19 @@ export const handler = async (
   }
 
   if (routeKey.endsWith('GET /confluences') || routeKey.endsWith('GET /confluences/base')) {
-    const [baseItems, customResult] = await Promise.all([
+    const [baseItems, customItems] = await Promise.all([
       getOrSeedBaseConfluenceItems(),
-      client.send(
-        new QueryCommand({
-          TableName: tableName,
-          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-          FilterExpression: 'itemType = :confluenceItemType',
-          ExpressionAttributeValues: {
-            ':userId': userSub,
-            ':startIso': '0000-01-01T00:00:00.000Z',
-            ':confluenceItemType': 'CONFLUENCE',
-          },
-          ScanIndexForward: false,
-        }),
-      ),
+      queryAllItems({
+        TableName: tableName,
+        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+        FilterExpression: 'itemType = :confluenceItemType',
+        ExpressionAttributeValues: {
+          ':userId': userSub,
+          ':startIso': '0000-01-01T00:00:00.000Z',
+          ':confluenceItemType': 'CONFLUENCE',
+        },
+        ScanIndexForward: false,
+      }),
     ]);
 
     const baseFromDb = baseItems
@@ -1658,7 +1667,7 @@ export const handler = async (
 
     const effectiveBase = baseFromDb;
 
-    const custom = (customResult.Items ?? [])
+    const custom = customItems
       .map((item) => ({
         id: String(item.id ?? ''),
         createdAt: String(item.createdAt ?? ''),
@@ -1703,20 +1712,18 @@ export const handler = async (
       return json(400, { message: 'Confluence name must be between 2 and 180 characters' });
     }
 
-    const [baseItems, customResult] = await Promise.all([
+    const [baseItems, customItems] = await Promise.all([
       getOrSeedBaseConfluenceItems(),
-      client.send(
-        new QueryCommand({
-          TableName: tableName,
-          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-          FilterExpression: 'itemType = :confluenceItemType',
-          ExpressionAttributeValues: {
-            ':userId': userSub,
-            ':startIso': '0000-01-01T00:00:00.000Z',
-            ':confluenceItemType': 'CONFLUENCE',
-          },
-        }),
-      ),
+      queryAllItems({
+        TableName: tableName,
+        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+        FilterExpression: 'itemType = :confluenceItemType',
+        ExpressionAttributeValues: {
+          ':userId': userSub,
+          ':startIso': '0000-01-01T00:00:00.000Z',
+          ':confluenceItemType': 'CONFLUENCE',
+        },
+      }),
     ]);
 
     const normalizedRequested = normalizeConfluenceName(name);
@@ -1728,7 +1735,7 @@ export const handler = async (
     );
     const normalizedBase = baseSetFromDb;
     const customSet = new Set(
-      (customResult.Items ?? [])
+      customItems
         .map((item) => String(item.name ?? ''))
         .map((item) => normalizeConfluenceName(item))
         .filter((item) => item.length > 0),
@@ -1824,20 +1831,18 @@ export const handler = async (
       return json(400, { message: 'Confluence name must be between 2 and 180 characters' });
     }
 
-    const [baseItems, customResult] = await Promise.all([
+    const [baseItems, customItems] = await Promise.all([
       getOrSeedBaseConfluenceItems(),
-      client.send(
-        new QueryCommand({
-          TableName: tableName,
-          KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-          FilterExpression: 'itemType = :confluenceItemType',
-          ExpressionAttributeValues: {
-            ':userId': userSub,
-            ':startIso': '0000-01-01T00:00:00.000Z',
-            ':confluenceItemType': 'CONFLUENCE',
-          },
-        }),
-      ),
+      queryAllItems({
+        TableName: tableName,
+        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+        FilterExpression: 'itemType = :confluenceItemType',
+        ExpressionAttributeValues: {
+          ':userId': userSub,
+          ':startIso': '0000-01-01T00:00:00.000Z',
+          ':confluenceItemType': 'CONFLUENCE',
+        },
+      }),
     ]);
 
     const normalizedRequested = normalizeConfluenceName(name);
@@ -1845,7 +1850,7 @@ export const handler = async (
       baseItems.map((item) => normalizeConfluenceName(String(item.name ?? ''))).filter((item) => item.length > 0),
     );
     const customSet = new Set(
-      (customResult.Items ?? [])
+      customItems
         .filter((item) => !(String(item.id ?? '') === id && String(item.createdAt ?? '') === createdAt))
         .map((item) => normalizeConfluenceName(String(item.name ?? '')))
         .filter((item) => item.length > 0),
@@ -2036,22 +2041,20 @@ export const handler = async (
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
-    const result = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'attribute_not_exists(itemType) OR itemType = :checkItemType',
-        ExpressionAttributeValues: {
-          ':userId': userSub,
-          ':startIso': startIso,
-          ':checkItemType': 'CHECKLIST',
-        },
-        ScanIndexForward: false,
-      }),
-    );
+    const items = await queryAllItems({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'attribute_not_exists(itemType) OR itemType = :checkItemType',
+      ExpressionAttributeValues: {
+        ':userId': userSub,
+        ':startIso': startIso,
+        ':checkItemType': 'CHECKLIST',
+      },
+      ScanIndexForward: false,
+    });
 
     return json(200, {
-      items: result.Items ?? [],
+      items,
     });
   }
 
@@ -2060,21 +2063,19 @@ export const handler = async (
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
-    const result = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'itemType = :analysisItemType',
-        ExpressionAttributeValues: {
-          ':userId': userSub,
-          ':startIso': startIso,
-          ':analysisItemType': 'MARKET_ANALYSIS',
-        },
-        ScanIndexForward: false,
-      }),
-    );
+    const items = await queryAllItems({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'itemType = :analysisItemType',
+      ExpressionAttributeValues: {
+        ':userId': userSub,
+        ':startIso': startIso,
+        ':analysisItemType': 'MARKET_ANALYSIS',
+      },
+      ScanIndexForward: false,
+    });
 
-    const filtered = (result.Items ?? [])
+    const filtered = items
       .filter((item) => (dayId ? String(item.dayId ?? '') === dayId : true))
       .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
 
@@ -2122,22 +2123,20 @@ export const handler = async (
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
-    const result = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'itemType = :tradeItemType',
-        ExpressionAttributeValues: {
-          ':userId': userSub,
-          ':startIso': startIso,
-          ':tradeItemType': 'TRADE_LOG',
-        },
-        ScanIndexForward: false,
-      }),
-    );
+    const items = await queryAllItems({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'itemType = :tradeItemType',
+      ExpressionAttributeValues: {
+        ':userId': userSub,
+        ':startIso': startIso,
+        ':tradeItemType': 'TRADE_LOG',
+      },
+      ScanIndexForward: false,
+    });
 
     return json(200, {
-      items: result.Items ?? [],
+      items,
     });
   }
 
@@ -2181,22 +2180,20 @@ export const handler = async (
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
-    const result = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'attribute_not_exists(itemType) OR itemType = :checkItemType',
-        ExpressionAttributeValues: {
-          ':userId': userSub,
-          ':startIso': startIso,
-          ':checkItemType': 'CHECKLIST',
-        },
-      }),
-    );
+    const items = await queryAllItems({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'attribute_not_exists(itemType) OR itemType = :checkItemType',
+      ExpressionAttributeValues: {
+        ':userId': userSub,
+        ':startIso': startIso,
+        ':checkItemType': 'CHECKLIST',
+      },
+    });
 
     return json(200, {
       days,
-      ...buildTrendReport(result.Items ?? []),
+      ...buildTrendReport(items),
     });
   }
 
@@ -2204,22 +2201,20 @@ export const handler = async (
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
-    const result = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'itemType = :analysisItemType',
-        ExpressionAttributeValues: {
-          ':userId': userSub,
-          ':startIso': startIso,
-          ':analysisItemType': 'MARKET_ANALYSIS',
-        },
-      }),
-    );
+    const items = await queryAllItems({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'itemType = :analysisItemType',
+      ExpressionAttributeValues: {
+        ':userId': userSub,
+        ':startIso': startIso,
+        ':analysisItemType': 'MARKET_ANALYSIS',
+      },
+    });
 
     return json(200, {
       days,
-      ...buildAnalysisTrendReport(result.Items ?? []),
+      ...buildAnalysisTrendReport(items),
     });
   }
 
@@ -2227,22 +2222,20 @@ export const handler = async (
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
-    const result = await client.send(
-      new QueryCommand({
-        TableName: tableName,
-        KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-        FilterExpression: 'itemType = :tradeItemType',
-        ExpressionAttributeValues: {
-          ':userId': userSub,
-          ':startIso': startIso,
-          ':tradeItemType': 'TRADE_LOG',
-        },
-      }),
-    );
+    const items = await queryAllItems({
+      TableName: tableName,
+      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
+      FilterExpression: 'itemType = :tradeItemType',
+      ExpressionAttributeValues: {
+        ':userId': userSub,
+        ':startIso': startIso,
+        ':tradeItemType': 'TRADE_LOG',
+      },
+    });
 
     return json(200, {
       days,
-      ...buildTradeTrendReport(result.Items ?? []),
+      ...buildTradeTrendReport(items),
     });
   }
 
