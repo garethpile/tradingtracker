@@ -1,4 +1,5 @@
 import { defineBackend } from '@aws-amplify/backend';
+import { CDKContextKey } from '@aws-amplify/platform-core';
 import { Duration, RemovalPolicy, Stack, Tags } from 'aws-cdk-lib';
 import {
   AuthorizationType,
@@ -29,12 +30,16 @@ const sanitizeNamePart = (value: string): string =>
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 
-const appIdPart = sanitizeNamePart(process.env.AWS_APP_ID ?? 'local').slice(0, 12) || 'local';
-const branchPart = sanitizeNamePart(
-  process.env.AWS_BRANCH ?? process.env.AMPLIFY_BRANCH ?? process.env.USER ?? 'sandbox',
-).slice(0, 30) || 'sandbox';
-const tableName = `tradingtracker-${appIdPart}-${branchPart}-sessions`;
-const deploymentEnv = process.env.AWS_BRANCH ?? process.env.AMPLIFY_BRANCH ?? 'sandbox';
+const backendNamespace = String(apiStack.node.getContext(CDKContextKey.BACKEND_NAMESPACE) ?? '');
+const backendName = String(apiStack.node.getContext(CDKContextKey.BACKEND_NAME) ?? '');
+const deploymentType = String(apiStack.node.getContext(CDKContextKey.DEPLOYMENT_TYPE) ?? 'sandbox');
+
+const namespacePart = sanitizeNamePart(backendNamespace).slice(0, 12) || 'local';
+const backendNamePart = sanitizeNamePart(backendName).slice(0, 30) || 'sandbox';
+const tableName = deploymentType === 'branch'
+  ? `tradingtracker-${namespacePart}-${backendNamePart}-sessions`
+  : `tradingtracker-${backendNamePart}-sessions`;
+const deploymentEnv = backendNamePart;
 
 const commonTags: Record<string, string> = {
   Project: 'TradingTracker',

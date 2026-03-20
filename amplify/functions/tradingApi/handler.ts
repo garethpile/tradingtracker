@@ -11,7 +11,11 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 
-const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const client = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+  marshallOptions: {
+    removeUndefinedValues: true,
+  },
+});
 const tableName = process.env.TRADING_TRACKER_TABLE_NAME;
 
 type ChecklistPayload = {
