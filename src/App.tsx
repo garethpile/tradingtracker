@@ -3,6 +3,7 @@ import type { ClipboardEvent, FormEvent } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import outputs from '../amplify_outputs.json';
+import { extractFromScreenshot } from './services/screenshotExtraction';
 import './App.css';
 
 type MenuTab = 'checklist' | 'tradeCalc' | 'trades' | 'confluences';
@@ -120,6 +121,8 @@ type TradeLogFormState = {
   }>;
   feelings: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments: string;
+  expertOpinion: string;
+  screenshotExtractedDetails: string;
   chartLink: string;
   chartImageData: string;
 };
@@ -157,6 +160,8 @@ type TradeLogItem = {
   totalProfit?: number;
   feelings?: string;
   comments?: string;
+  expertOpinion?: string;
+  screenshotExtractedDetails?: string;
   chartLink?: string;
   chartImageData?: string;
   journalScore: number;
@@ -263,6 +268,8 @@ const defaultTradeForm = (): TradeLogFormState => ({
   ],
   feelings: 'Not filled',
   comments: '',
+  expertOpinion: '',
+  screenshotExtractedDetails: '',
   chartLink: '',
   chartImageData: '',
 });
@@ -1490,6 +1497,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         tradeEntries: buildTradeEntriesFromItem(item),
         feelings: item.feelings as TradeLogFormState['feelings'] ?? 'Not filled',
         comments: item.comments ?? '',
+        expertOpinion: item.expertOpinion ?? '',
+        screenshotExtractedDetails: item.screenshotExtractedDetails ?? '',
         chartLink: item.chartLink ?? '',
         chartImageData: item.chartImageData ?? '',
       });
@@ -1546,6 +1555,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       totalProfit: tradeProfitValue,
       feelings: tradeForm.feelings,
       comments: tradeForm.comments,
+      expertOpinion: tradeForm.expertOpinion,
+      screenshotExtractedDetails: tradeForm.screenshotExtractedDetails,
       chartLink: tradeForm.chartLink,
       chartImageData: tradeForm.chartImageData || undefined,
     };
@@ -1618,7 +1629,13 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
 
     try {
       const dataUrl = await toResizedDataUrl(file);
-      setTradeForm((prev) => ({ ...prev, chartImageData: dataUrl }));
+      const extraction = await extractFromScreenshot(dataUrl);
+      setTradeForm((prev) => ({
+        ...prev,
+        chartImageData: dataUrl,
+        screenshotExtractedDetails: extraction.extractedText,
+        expertOpinion: extraction.expertOpinion,
+      }));
       setError(null);
     } catch {
       setError('Failed to paste chart image');
@@ -2349,6 +2366,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                       )}
                     </div>
                   )}
+                  <label>Extracted screenshot details<textarea rows={3} value={tradeForm.screenshotExtractedDetails} onChange={(event) => setTradeForm((prev) => ({ ...prev, screenshotExtractedDetails: event.target.value }))} /></label>
+                  <label>Expert opinion<textarea rows={3} value={tradeForm.expertOpinion} onChange={(event) => setTradeForm((prev) => ({ ...prev, expertOpinion: event.target.value }))} /></label>
                   <label>Comments<textarea rows={3} value={tradeForm.comments} onChange={(event) => setTradeForm((prev) => ({ ...prev, comments: event.target.value }))} /></label>
                   </fieldset>
                   <div className="form-footer">
