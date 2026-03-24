@@ -7,6 +7,8 @@ Amplify Gen 2 web app for daily pre-trade checklist capture with:
 - DynamoDB persistence (multiple captures per day supported)
 - Session-level market analysis capture (mapped from market-analysis PDF)
 - Historical trends and readiness scoring
+- Screenshot-assisted trade logging with OCR prefill
+- Telegram webhook + Lambda OCR scaffold for screenshot-based trade logging
 
 ## Architecture
 
@@ -21,17 +23,27 @@ Amplify Gen 2 web app for daily pre-trade checklist capture with:
     - `POST /analysis` save market analysis capture
     - `GET /analysis?days=30` list market analyses for signed-in user
     - `GET /analysis/trends?days=30` aggregated market-analysis trend report
+    - `POST /trades` saves trade logs, including screenshot OCR details and expert opinion
+    - `POST /telegram/webhook` receives Telegram bot updates and queues OCR processing
   - DynamoDB table (on-demand): deterministic per app/branch (`tradingtracker-<appId>-<branch>-sessions`)
+  - S3 bucket for Telegram screenshot uploads
 
 ## Amplify Branch/Pipeline Deployment (Gen 2)
 
 This repo is now set up for Amplify branch deployments using `amplify.yml`.
+
+Operational default going forward:
+
+- Region: `af-south-1`
+- Local AWS profile: `sgp-af`
+- Sandbox identifier: `prod`
 
 ### How it works
 
 - On each branch build, Amplify runs:
   - `npx ampx pipeline-deploy --branch "$AWS_BRANCH" --app-id "$AWS_APP_ID" ...`
 - This deploys/updates backend resources for that branch and writes `amplify_outputs.json`.
+- The pipeline then regenerates `app-config.json` from the `af-south-1` stack outputs so the frontend uses the same Cognito/API endpoints as the deployed backend.
 - Frontend build then runs using those outputs and publishes `dist/`.
 
 ### One-time setup in Amplify Console
@@ -39,7 +51,7 @@ This repo is now set up for Amplify branch deployments using `amplify.yml`.
 1. Create Amplify app and connect repository: `garethpile/tradingtracker`.
 2. Add branches you want to deploy (for example `main` and `dev`).
 3. Confirm build settings use the committed `amplify.yml`.
-4. Ensure app is in region `eu-west-1` and uses AWS account `732439976770`.
+4. Ensure app is in region `af-south-1` and uses AWS account `732439976770`.
 
 ### Build spec
 
@@ -77,21 +89,73 @@ npm run lint
 npm run build
 ```
 
+4. Deploy backend changes when Amplify data or Lambda contracts change:
+
+```bash
+npm run sandbox:deploy
+```
+
+This is required after backend changes such as new persisted trade-log fields, otherwise the local frontend and deployed backend can drift.
+
+## Telegram OCR Scaffold
+
+The repo now contains a serverless Telegram ingestion path:
+
+- `amplify/functions/telegramWebhook`
+  - receives Telegram webhook updates
+  - downloads the screenshot from Telegram
+  - stores the original image in S3
+  - invokes the OCR worker asynchronously
+- `amplify/functions/telegramOcr`
+  - runs Tesseract inside a Lambda container image
+  - extracts text and basic trade fields
+  - writes a `TRADE_LOG` row into DynamoDB
+  - replies back to Telegram with the outcome
+
+Before deploying or using the Telegram flow, configure these Amplify secrets:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
+- `TELEGRAM_ALLOWED_CHAT_IDS`
+- `TELEGRAM_TARGET_USER_ID`
+
+Set them with the `af-south-1` defaults:
+
+```bash
+npm run sandbox:secret:set:bot-token
+npm run sandbox:secret:set:webhook-secret
+npm run sandbox:secret:set:allowed-chat-ids
+npm run sandbox:secret:set:target-user-id
+```
+
+After deployment, use the generated `telegramWebhookUrl` output as the Telegram bot webhook target.
+
 ## Legacy Sandbox Deployment (optional)
 
 If you need manual sandbox deployment from local machine:
 
 ```bash
-npx ampx sandbox --profile aws-lean-prod-pile-eu-west-1 --identifier prod --once --outputs-format json --outputs-out-dir .
+AWS_PROFILE=sgp-af AWS_REGION=af-south-1 npx ampx sandbox --identifier prod --once --outputs-format json --outputs-out-dir .
 ```
 
-## Current deployed sandbox (from local deploy)
+## Current Checked-In Outputs
+
+`amplify_outputs.json` is generated deployment output, not a source-of-truth config file.
+If it still points at another region, regenerate it from the current `af-south-1` deployment using:
+
+```bash
+npm run sandbox:deploy
+```
+
+## Historical Local Deploy Snapshot
 
 - AWS profile: `aws-lean-prod-pile-eu-west-1`
 - Region: `eu-west-1`
 - Amplify stack: `amplify-tradingtracker-prod-sandbox-be2f050c63`
 - API URL: `https://1v69yzz4r5.execute-api.eu-west-1.amazonaws.com/prod/`
 - Cognito User Pool: `eu-west-1_qy9cFgzMy`
+
+This section is historical and should be replaced after the `af-south-1` deployment is confirmed.
 
 ## Notes
 

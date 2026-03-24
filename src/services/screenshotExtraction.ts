@@ -2,7 +2,22 @@ import { createWorker } from 'tesseract.js';
 
 export type ScreenshotExtractionResult = {
   extractedText: string;
+  extractedSummary: string;
   expertOpinion: string;
+};
+
+const summarizeScreenshotText = (text: string): string => {
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const picked = lines.filter((line) => {
+    const lower = line.toLowerCase();
+    return /entry|sl|stop|tp|target|rr|risk|session|bias|result|setup|confluence|bos|choch|fvg|liquidity/.test(lower);
+  });
+
+  return (picked.length > 0 ? picked : lines).slice(0, 12).join('\n');
 };
 
 const buildExpertOpinion = (text: string): string => {
@@ -42,6 +57,7 @@ export const extractFromScreenshot = async (dataUrl: string): Promise<Screenshot
 
     return {
       extractedText,
+      extractedSummary: summarizeScreenshotText(extractedText),
       expertOpinion: buildExpertOpinion(extractedText)
     };
   } finally {

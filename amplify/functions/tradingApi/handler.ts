@@ -3,6 +3,8 @@ import type {
   APIGatewayProxyResult,
 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import {
   DeleteCommand,
   DynamoDBDocumentClient,
@@ -17,6 +19,7 @@ const client = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
     removeUndefinedValues: true,
   },
 });
+const s3 = new S3Client({});
 const tableName = process.env.TRADING_TRACKER_TABLE_NAME;
 
 type ChecklistPayload = {
@@ -40,7 +43,6 @@ type TrendBias = 'bullish' | 'bearish' | 'consolidation' | 'none';
 type ZoneBand = 'sell' | 'neutral' | 'buy';
 
 type MarketAnalysisPayload = {
-  dayId?: string;
   analysisTime?: string;
   pair: string;
   tradingDate: string;
@@ -134,61 +136,24 @@ type TradeLogPayload = {
   totalProfit?: number;
   feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
   comments?: string;
+  tradeStage?: string;
+  tradeMethod?: string;
+  tradeDetails?: string[];
+  mainConfluences?: string[];
+  additionalConfluences?: string[];
+  invalidatedConfluences?: string[];
+  commentLines?: string[];
+  telegramStructuredImport?: boolean;
   chartLink?: string;
   chartImageData?: string;
-};
-
-type TradingDayPayload = {
-  tradingDate: string;
-  title?: string;
-  notes?: string;
-};
-
-type TradingSessionPayload = {
-  dayId: string;
-  name: string;
-  analysisTime?: string;
-  tradingAsset: string;
-  strategy?: string;
-  directionalBias?: 'bullish' | 'bearish' | 'consolidation' | 'none';
-  confluences?: string[];
-  notes?: string;
-};
-
-type SessionTradePayload = {
-  dayId: string;
-  sessionId?: string;
-  tradeDate: string;
-  tradeTime?: string;
-  tradingAsset: string;
-  strategy: string;
-  tradeSide?: 'buy' | 'sell';
-  lotSize?: number;
-  confluences?: string[];
-  entryPrice?: number;
-  riskRewardRatio?: number;
-  stopLossPrice?: number;
-  takeProfitPrice?: number;
-  estimatedLoss?: number;
-  estimatedProfit?: number;
-  exitPrice?: number;
-  tradeEntries?: Array<{
-    id?: string;
-    lotSize?: number;
-    entryPrice?: number;
-    stopLossPrice?: number;
-    exitPrice?: number;
-    takeProfits?: Array<{
-      id?: string;
-      lotSize?: number;
-      takeProfitPrice?: number;
-    }>;
-  }>;
-  totalProfit?: number;
-  feelings?: 'Satisfied' | 'Neutral' | 'Disappointed' | 'Not filled';
-  comments?: string;
-  chartLink?: string;
-  chartImageData?: string;
+  chartImageBucket?: string;
+  chartImageKey?: string;
+  chartImageUrl?: string;
+  screenshotExtractedDetails?: string;
+  expertOpinion?: string;
+  sourceChannel?: string;
+  sourceMessageId?: string;
+  sourceRawText?: string;
 };
 
 type ConfluencePayload = {
@@ -228,6 +193,32 @@ const json = (statusCode: number, payload: unknown): APIGatewayProxyResult => ({
   },
   body: JSON.stringify(payload),
 });
+
+const hydrateTradeImageUrls = async <T extends TradeLogPayload>(items: T[]): Promise<Array<T & { chartImageUrl?: string }>> =>
+  Promise.all(items.map(async (item) => {
+    if (!item.chartImageBucket || !item.chartImageKey) {
+      return item;
+    }
+
+    try {
+      const chartImageUrl = await getSignedUrl(
+        s3,
+        new GetObjectCommand({
+          Bucket: item.chartImageBucket,
+          Key: item.chartImageKey,
+        }),
+        { expiresIn: 3600 },
+      );
+      return { ...item, chartImageUrl };
+    } catch (error) {
+      console.error('Failed to sign trade chart image URL', {
+        error,
+        bucket: item.chartImageBucket,
+        key: item.chartImageKey,
+      });
+      return item;
+    }
+  }));
 
 const getUserSub = (event: APIGatewayProxyEvent): string | undefined => {
   const claims = event.requestContext.authorizer?.claims;
@@ -953,22 +944,20 @@ export const handler = async (
     const existingId = event.queryStringParameters?.id;
     const isUpdate = Boolean(existingCreatedAt && existingId);
 
-    if (payload.dayId) {
-      const allItems = await getAllUserItems(userSub);
-      const currentSession = normalizeAnalysisSessionName(payload.sessionName);
-      const existingForSession = allItems.find(
-        (item) => item.itemType === 'MARKET_ANALYSIS'
-          && String(item.dayId ?? '') === String(payload.dayId)
-          && normalizeAnalysisSessionName(String(item.sessionName ?? '')) === currentSession
-          && (!isUpdate || String(item.id ?? '') !== String(existingId ?? '')),
-      );
-      if (existingForSession) {
-        return json(409, {
-          message: 'Market analysis already exists for this session on this trading day',
-          id: String(existingForSession.id ?? ''),
-          createdAt: String(existingForSession.createdAt ?? ''),
-        });
-      }
+    const allItems = await getAllUserItems(userSub);
+    const currentSession = normalizeAnalysisSessionName(payload.sessionName);
+    const existingForSession = allItems.find(
+      (item) => item.itemType === 'MARKET_ANALYSIS'
+        && String(item.tradingDate ?? '') === String(payload.tradingDate)
+        && normalizeAnalysisSessionName(String(item.sessionName ?? '')) === currentSession
+        && (!isUpdate || String(item.id ?? '') !== String(existingId ?? '')),
+    );
+    if (existingForSession) {
+      return json(409, {
+        message: 'Market analysis already exists for this session on this trading date',
+        id: String(existingForSession.id ?? ''),
+        createdAt: String(existingForSession.createdAt ?? ''),
+      });
     }
 
     const createdAt = existingCreatedAt ?? new Date().toISOString();
@@ -1117,528 +1106,6 @@ export const handler = async (
     return json(200, item);
   }
 
-  if (routeKey.endsWith('POST /trading-days')) {
-    if (!event.body) {
-      return json(400, { message: 'Missing request body' });
-    }
-
-    const payload = JSON.parse(event.body) as TradingDayPayload;
-    if (!payload.tradingDate) {
-      return json(400, { message: 'Missing tradingDate' });
-    }
-
-    const existingCreatedAt = event.queryStringParameters?.createdAt;
-    const existingId = event.queryStringParameters?.id;
-    const isUpdate = Boolean(existingCreatedAt && existingId);
-    if (!isUpdate) {
-      const allItems = await getAllUserItems(userSub);
-      const duplicate = allItems.find(
-        (item) => item.itemType === 'TRADING_DAY' && String(item.tradingDate ?? '') === payload.tradingDate,
-      );
-      if (duplicate) {
-        return json(409, { message: 'A trading day already exists for this date' });
-      }
-    }
-    const createdAt = existingCreatedAt ?? new Date().toISOString();
-    const id = existingId ?? crypto.randomUUID();
-    const item = {
-      userId: userSub,
-      createdAt,
-      id,
-      itemType: 'TRADING_DAY',
-      ...payload,
-    };
-
-    if (isUpdate) {
-      try {
-        await client.send(
-          new PutCommand({
-            TableName: tableName,
-            Item: item,
-            ConditionExpression: 'id = :id AND itemType = :dayItemType',
-            ExpressionAttributeValues: {
-              ':id': id,
-              ':dayItemType': 'TRADING_DAY',
-            },
-          }),
-        );
-      } catch (error) {
-        const maybeError = error as { name?: string; message?: string };
-        const errorName = maybeError.name ?? '';
-        const errorMessage = maybeError.message ?? '';
-        if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-          return json(404, { message: 'Trading day not found' });
-        }
-        return json(500, { message: 'Failed to update trading day', detail: errorMessage || 'Unknown error' });
-      }
-      return json(200, item);
-    }
-
-    await client.send(new PutCommand({ TableName: tableName, Item: item }));
-    return json(201, item);
-  }
-
-  if (routeKey.endsWith('GET /trading-days')) {
-    const days = parseQueryDays(event.queryStringParameters?.days);
-    const startIso = getStartIsoForDays(days);
-
-    const items = await queryAllItems({
-      TableName: tableName,
-      KeyConditionExpression: 'userId = :userId AND createdAt >= :startIso',
-      FilterExpression: 'itemType = :dayItemType',
-      ExpressionAttributeValues: {
-        ':userId': userSub,
-        ':startIso': startIso,
-        ':dayItemType': 'TRADING_DAY',
-      },
-      ScanIndexForward: false,
-    });
-
-    return json(200, { items });
-  }
-
-  if (routeKey.endsWith('PUT /trading-days')) {
-    const createdAt = event.queryStringParameters?.createdAt;
-    const id = event.queryStringParameters?.id;
-    if (!createdAt || !id) {
-      return json(400, { message: 'Missing createdAt or id query parameter' });
-    }
-    if (!event.body) {
-      return json(400, { message: 'Missing request body' });
-    }
-
-    const payload = JSON.parse(event.body) as TradingDayPayload;
-    if (!payload.tradingDate) {
-      return json(400, { message: 'Missing tradingDate' });
-    }
-
-    const item = {
-      userId: userSub,
-      createdAt,
-      id,
-      itemType: 'TRADING_DAY',
-      ...payload,
-    };
-
-    try {
-      await client.send(
-        new PutCommand({
-          TableName: tableName,
-          Item: item,
-          ConditionExpression: 'id = :id AND itemType = :dayItemType',
-          ExpressionAttributeValues: {
-            ':id': id,
-            ':dayItemType': 'TRADING_DAY',
-          },
-        }),
-      );
-    } catch (error) {
-      const maybeError = error as { name?: string; message?: string };
-      const errorName = maybeError.name ?? '';
-      const errorMessage = maybeError.message ?? '';
-      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-        return json(404, { message: 'Trading day not found' });
-      }
-      return json(500, { message: 'Failed to update trading day', detail: errorMessage || 'Unknown error' });
-    }
-
-    return json(200, item);
-  }
-
-  if (routeKey.endsWith('DELETE /trading-days')) {
-    const createdAt = event.queryStringParameters?.createdAt;
-    const id = event.queryStringParameters?.id;
-    if (!createdAt || !id) {
-      return json(400, { message: 'Missing createdAt or id query parameter' });
-    }
-
-    const allItems = await getAllUserItems(userSub);
-    const sessions = allItems.filter(
-      (item) => item.itemType === 'TRADING_SESSION' && String(item.dayId ?? '') === id,
-    );
-    const trades = allItems.filter(
-      (item) => item.itemType === 'SESSION_TRADE' && String(item.dayId ?? '') === id,
-    );
-
-    try {
-      await client.send(
-        new DeleteCommand({
-          TableName: tableName,
-          Key: { userId: userSub, createdAt },
-          ConditionExpression: 'id = :id AND itemType = :dayItemType',
-          ExpressionAttributeValues: {
-            ':id': id,
-            ':dayItemType': 'TRADING_DAY',
-          },
-        }),
-      );
-
-      await Promise.all([
-        ...sessions.map((item) => client.send(
-          new DeleteCommand({
-            TableName: tableName,
-            Key: {
-              userId: userSub,
-              createdAt: String(item.createdAt ?? ''),
-            },
-          }),
-        )),
-        ...trades.map((item) => client.send(
-          new DeleteCommand({
-            TableName: tableName,
-            Key: {
-              userId: userSub,
-              createdAt: String(item.createdAt ?? ''),
-            },
-          }),
-        )),
-      ]);
-    } catch (error) {
-      const maybeError = error as { name?: string; message?: string };
-      const errorName = maybeError.name ?? '';
-      const errorMessage = maybeError.message ?? '';
-      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-        return json(404, { message: 'Trading day not found' });
-      }
-      return json(500, { message: 'Failed to delete trading day', detail: errorMessage || 'Unknown error' });
-    }
-
-    return json(200, { deleted: true });
-  }
-
-  if (routeKey.endsWith('POST /trading-sessions')) {
-    if (!event.body) {
-      return json(400, { message: 'Missing request body' });
-    }
-
-    const payload = JSON.parse(event.body) as TradingSessionPayload;
-    if (!payload.dayId || !payload.name || !payload.tradingAsset) {
-      return json(400, { message: 'Missing required fields: dayId, name, tradingAsset' });
-    }
-
-    const existingCreatedAt = event.queryStringParameters?.createdAt;
-    const existingId = event.queryStringParameters?.id;
-    const isUpdate = Boolean(existingCreatedAt && existingId);
-    const createdAt = existingCreatedAt ?? new Date().toISOString();
-    const id = existingId ?? crypto.randomUUID();
-    const item = {
-      userId: userSub,
-      createdAt,
-      id,
-      itemType: 'TRADING_SESSION',
-      ...payload,
-      confluences: (payload.confluences ?? []).map((entry) => entry.trim()).filter((entry) => entry.length > 0),
-    };
-
-    if (isUpdate) {
-      try {
-        await client.send(
-          new PutCommand({
-            TableName: tableName,
-            Item: item,
-            ConditionExpression: 'id = :id AND itemType = :sessionItemType',
-            ExpressionAttributeValues: {
-              ':id': id,
-              ':sessionItemType': 'TRADING_SESSION',
-            },
-          }),
-        );
-      } catch (error) {
-        const maybeError = error as { name?: string; message?: string };
-        const errorName = maybeError.name ?? '';
-        const errorMessage = maybeError.message ?? '';
-        if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-          return json(404, { message: 'Trading analysis session not found' });
-        }
-        return json(500, { message: 'Failed to update trading analysis session', detail: errorMessage || 'Unknown error' });
-      }
-      return json(200, item);
-    }
-
-    await client.send(new PutCommand({ TableName: tableName, Item: item }));
-    return json(201, item);
-  }
-
-  if (routeKey.endsWith('GET /trading-sessions')) {
-    const dayId = event.queryStringParameters?.dayId;
-    if (!dayId) {
-      return json(400, { message: 'Missing dayId query parameter' });
-    }
-
-    const allItems = await getAllUserItems(userSub);
-    const items = allItems
-      .filter((item) => item.itemType === 'TRADING_SESSION' && String(item.dayId ?? '') === dayId)
-      .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
-
-    return json(200, { items });
-  }
-
-  if (routeKey.endsWith('PUT /trading-sessions')) {
-    const createdAt = event.queryStringParameters?.createdAt;
-    const id = event.queryStringParameters?.id;
-    if (!createdAt || !id) {
-      return json(400, { message: 'Missing createdAt or id query parameter' });
-    }
-    if (!event.body) {
-      return json(400, { message: 'Missing request body' });
-    }
-
-    const payload = JSON.parse(event.body) as TradingSessionPayload;
-    if (!payload.dayId || !payload.name || !payload.tradingAsset) {
-      return json(400, { message: 'Missing required fields: dayId, name, tradingAsset' });
-    }
-
-    const item = {
-      userId: userSub,
-      createdAt,
-      id,
-      itemType: 'TRADING_SESSION',
-      ...payload,
-      confluences: (payload.confluences ?? []).map((entry) => entry.trim()).filter((entry) => entry.length > 0),
-    };
-
-    try {
-      await client.send(
-        new PutCommand({
-          TableName: tableName,
-          Item: item,
-          ConditionExpression: 'id = :id AND itemType = :sessionItemType',
-          ExpressionAttributeValues: {
-            ':id': id,
-            ':sessionItemType': 'TRADING_SESSION',
-          },
-        }),
-      );
-    } catch (error) {
-      const maybeError = error as { name?: string; message?: string };
-      const errorName = maybeError.name ?? '';
-      const errorMessage = maybeError.message ?? '';
-      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-        return json(404, { message: 'Trading analysis session not found' });
-      }
-      return json(500, { message: 'Failed to update trading analysis session', detail: errorMessage || 'Unknown error' });
-    }
-
-    return json(200, item);
-  }
-
-  if (routeKey.endsWith('DELETE /trading-sessions')) {
-    const createdAt = event.queryStringParameters?.createdAt;
-    const id = event.queryStringParameters?.id;
-    if (!createdAt || !id) {
-      return json(400, { message: 'Missing createdAt or id query parameter' });
-    }
-
-    const allItems = await getAllUserItems(userSub);
-    const trades = allItems.filter(
-      (item) => item.itemType === 'SESSION_TRADE' && String(item.sessionId ?? '') === id,
-    );
-
-    try {
-      await client.send(
-        new DeleteCommand({
-          TableName: tableName,
-          Key: { userId: userSub, createdAt },
-          ConditionExpression: 'id = :id AND itemType = :sessionItemType',
-          ExpressionAttributeValues: {
-            ':id': id,
-            ':sessionItemType': 'TRADING_SESSION',
-          },
-        }),
-      );
-
-      await Promise.all(
-        trades.map((item) => client.send(
-          new DeleteCommand({
-            TableName: tableName,
-            Key: {
-              userId: userSub,
-              createdAt: String(item.createdAt ?? ''),
-            },
-          }),
-        )),
-      );
-    } catch (error) {
-      const maybeError = error as { name?: string; message?: string };
-      const errorName = maybeError.name ?? '';
-      const errorMessage = maybeError.message ?? '';
-      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-        return json(404, { message: 'Trading analysis session not found' });
-      }
-      return json(500, { message: 'Failed to delete trading analysis session', detail: errorMessage || 'Unknown error' });
-    }
-
-    return json(200, { deleted: true });
-  }
-
-  if (routeKey.endsWith('POST /session-trades')) {
-    if (!event.body) {
-      return json(400, { message: 'Missing request body' });
-    }
-
-    const payload = JSON.parse(event.body) as SessionTradePayload;
-    if (!payload.dayId || !payload.tradeDate || !payload.tradingAsset || !payload.strategy) {
-      return json(400, { message: 'Missing required fields: dayId, tradeDate, tradingAsset, strategy' });
-    }
-
-    const existingCreatedAt = event.queryStringParameters?.createdAt;
-    const existingId = event.queryStringParameters?.id;
-    const isUpdate = Boolean(existingCreatedAt && existingId);
-    const createdAt = existingCreatedAt ?? new Date().toISOString();
-    const id = existingId ?? crypto.randomUUID();
-    const derived = calculateTradeDerivedValues(payload);
-
-    const item = {
-      userId: userSub,
-      createdAt,
-      id,
-      itemType: 'SESSION_TRADE',
-      ...payload,
-      sessionId: payload.sessionId ?? payload.dayId,
-      confluences: (payload.confluences ?? []).map((entry) => entry.trim()).filter((entry) => entry.length > 0),
-      estimatedLoss: derived.estimatedLoss ?? payload.estimatedLoss,
-      estimatedProfit: derived.estimatedProfit ?? payload.estimatedProfit,
-      totalProfit: derived.tradeProfit,
-      journalScore: scoreTradeLog(payload),
-    };
-
-    if (isUpdate) {
-      try {
-        await client.send(
-          new PutCommand({
-            TableName: tableName,
-            Item: item,
-            ConditionExpression: 'id = :id AND itemType = :sessionTradeItemType',
-            ExpressionAttributeValues: {
-              ':id': id,
-              ':sessionTradeItemType': 'SESSION_TRADE',
-            },
-          }),
-        );
-      } catch (error) {
-        const maybeError = error as { name?: string; message?: string };
-        const errorName = maybeError.name ?? '';
-        const errorMessage = maybeError.message ?? '';
-        if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-          return json(404, { message: 'Trade not found' });
-        }
-        return json(500, { message: 'Failed to update trade', detail: errorMessage || 'Unknown error' });
-      }
-      return json(200, item);
-    }
-
-    await client.send(new PutCommand({ TableName: tableName, Item: item }));
-    return json(201, item);
-  }
-
-  if (routeKey.endsWith('GET /session-trades')) {
-    const sessionId = event.queryStringParameters?.sessionId;
-    const dayId = event.queryStringParameters?.dayId;
-    if (!sessionId && !dayId) {
-      return json(400, { message: 'Missing sessionId or dayId query parameter' });
-    }
-
-    const allItems = await getAllUserItems(userSub);
-    const items = allItems
-      .filter((item) => {
-        if (item.itemType !== 'SESSION_TRADE') {
-          return false;
-        }
-        if (sessionId) {
-          return String(item.sessionId ?? '') === sessionId;
-        }
-        return String(item.dayId ?? '') === dayId;
-      })
-      .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
-
-    return json(200, { items });
-  }
-
-  if (routeKey.endsWith('PUT /session-trades')) {
-    const createdAt = event.queryStringParameters?.createdAt;
-    const id = event.queryStringParameters?.id;
-    if (!createdAt || !id) {
-      return json(400, { message: 'Missing createdAt or id query parameter' });
-    }
-    if (!event.body) {
-      return json(400, { message: 'Missing request body' });
-    }
-
-    const payload = JSON.parse(event.body) as SessionTradePayload;
-    if (!payload.dayId || !payload.sessionId || !payload.tradeDate || !payload.tradingAsset || !payload.strategy) {
-      return json(400, { message: 'Missing required fields: dayId, sessionId, tradeDate, tradingAsset, strategy' });
-    }
-
-    const derived = calculateTradeDerivedValues(payload);
-    const item = {
-      userId: userSub,
-      createdAt,
-      id,
-      itemType: 'SESSION_TRADE',
-      ...payload,
-      confluences: (payload.confluences ?? []).map((entry) => entry.trim()).filter((entry) => entry.length > 0),
-      estimatedLoss: derived.estimatedLoss ?? payload.estimatedLoss,
-      estimatedProfit: derived.estimatedProfit ?? payload.estimatedProfit,
-      totalProfit: derived.tradeProfit,
-      journalScore: scoreTradeLog(payload),
-    };
-
-    try {
-      await client.send(
-        new PutCommand({
-          TableName: tableName,
-          Item: item,
-          ConditionExpression: 'id = :id AND itemType = :sessionTradeItemType',
-          ExpressionAttributeValues: {
-            ':id': id,
-            ':sessionTradeItemType': 'SESSION_TRADE',
-          },
-        }),
-      );
-    } catch (error) {
-      const maybeError = error as { name?: string; message?: string };
-      const errorName = maybeError.name ?? '';
-      const errorMessage = maybeError.message ?? '';
-      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-        return json(404, { message: 'Trade not found' });
-      }
-      return json(500, { message: 'Failed to update trade', detail: errorMessage || 'Unknown error' });
-    }
-
-    return json(200, item);
-  }
-
-  if (routeKey.endsWith('DELETE /session-trades')) {
-    const createdAt = event.queryStringParameters?.createdAt;
-    const id = event.queryStringParameters?.id;
-    if (!createdAt || !id) {
-      return json(400, { message: 'Missing createdAt or id query parameter' });
-    }
-
-    try {
-      await client.send(
-        new DeleteCommand({
-          TableName: tableName,
-          Key: { userId: userSub, createdAt },
-          ConditionExpression: 'id = :id AND itemType = :sessionTradeItemType',
-          ExpressionAttributeValues: {
-            ':id': id,
-            ':sessionTradeItemType': 'SESSION_TRADE',
-          },
-        }),
-      );
-    } catch (error) {
-      const maybeError = error as { name?: string; message?: string };
-      const errorName = maybeError.name ?? '';
-      const errorMessage = maybeError.message ?? '';
-      if (errorName === 'ConditionalCheckFailedException' || errorMessage.includes('ConditionalCheckFailedException')) {
-        return json(404, { message: 'Trade not found' });
-      }
-      return json(500, { message: 'Failed to delete trade', detail: errorMessage || 'Unknown error' });
-    }
-
-    return json(200, { deleted: true });
-  }
 
   if (routeKey.endsWith('GET /confluences') || routeKey.endsWith('GET /confluences/base')) {
     const [baseItems, customItems] = await Promise.all([
@@ -2054,12 +1521,12 @@ export const handler = async (
     });
 
     return json(200, {
-      items,
+      items: await hydrateTradeImageUrls(items),
     });
   }
 
   if (routeKey.endsWith('GET /analysis')) {
-    const dayId = event.queryStringParameters?.dayId;
+    const tradingDate = event.queryStringParameters?.tradingDate;
     const days = parseQueryDays(event.queryStringParameters?.days);
     const startIso = getStartIsoForDays(days);
 
@@ -2076,7 +1543,7 @@ export const handler = async (
     });
 
     const filtered = items
-      .filter((item) => (dayId ? String(item.dayId ?? '') === dayId : true))
+      .filter((item) => (tradingDate ? String(item.tradingDate ?? '') === tradingDate : true))
       .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
 
     return json(200, {

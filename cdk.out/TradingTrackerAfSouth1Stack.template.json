@@ -1,0 +1,4434 @@
+{
+ "Description": "Trading Tracker infrastructure for af-south-1",
+ "Resources": {
+  "TradingTrackerTable2DABF34E": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "userId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "createdAt",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "DeletionProtectionEnabled": true,
+    "KeySchema": [
+     {
+      "AttributeName": "userId",
+      "KeyType": "HASH"
+     },
+     {
+      "AttributeName": "createdAt",
+      "KeyType": "RANGE"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "TableName": "tradingtracker-prod-sessions",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerTable/Resource"
+   }
+  },
+  "TelegramSecretB69F6981": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Telegram configuration for Trading Tracker",
+    "Name": "tradingtracker/telegram",
+    "SecretString": "{\"botToken\":\"__SET_ME__\",\"webhookSecret\":\"__SET_ME__\",\"allowedChatIds\":[\"__SET_ME__\"],\"targetUserId\":\"__SET_ME__\"}",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramSecret/Resource"
+   }
+  },
+  "TelegramScreenshotBucket2ED1FFF4": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "tradingtracker-prod-telegram-shots-732439976770-af-south-1",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramScreenshotBucket/Resource"
+   }
+  },
+  "WebHostingBucket56BD56D7": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "tradingtracker-prod-web-732439976770-af-south-1",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "aws-cdk:cr-owned:4961c5b6",
+      "Value": "true"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/WebHostingBucket/Resource"
+   }
+  },
+  "WebHostingBucketPolicy78A5CC6A": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "WebHostingBucket56BD56D7"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "WebOriginAccessIdentityD2E53C1C",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "WebHostingBucket56BD56D7",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "WebHostingBucket56BD56D7",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "WebOriginAccessIdentityD2E53C1C",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "WebHostingBucket56BD56D7",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/WebHostingBucket/Policy/Resource"
+   }
+  },
+  "PostConfirmationAddTraderFunctionServiceRoleB53A6F6E": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/PostConfirmationAddTraderFunction/ServiceRole/Resource"
+   }
+  },
+  "PostConfirmationAddTraderFunctionServiceRoleDefaultPolicy42BFE5C4": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "cognito-idp:AdminAddUserToGroup",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":cognito-idp:af-south-1:732439976770:userpool/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "PostConfirmationAddTraderFunctionServiceRoleDefaultPolicy42BFE5C4",
+    "Roles": [
+     {
+      "Ref": "PostConfirmationAddTraderFunctionServiceRoleB53A6F6E"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/PostConfirmationAddTraderFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "PostConfirmationAddTraderFunctionDB11EF34": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-732439976770-af-south-1",
+     "S3Key": "2bf38540c2589e18ff0dfd1fa5f7323b4f333f745c60effb8078a5973d82067c.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "DEFAULT_TRADER_GROUP": "Traders"
+     }
+    },
+    "FunctionName": "tradingtracker-post-confirmation-add-trader",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "PostConfirmationAddTraderFunctionServiceRoleB53A6F6E",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ],
+    "Timeout": 20
+   },
+   "DependsOn": [
+    "PostConfirmationAddTraderFunctionServiceRoleDefaultPolicy42BFE5C4",
+    "PostConfirmationAddTraderFunctionServiceRoleB53A6F6E"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/PostConfirmationAddTraderFunction/Resource",
+    "aws:asset:path": "asset.2bf38540c2589e18ff0dfd1fa5f7323b4f333f745c60effb8078a5973d82067c",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "UserPoolPostConfirmationCognito0E6001F8": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "PostConfirmationAddTraderFunctionDB11EF34",
+      "Arn"
+     ]
+    },
+    "Principal": "cognito-idp.amazonaws.com",
+    "SourceArn": {
+     "Fn::GetAtt": [
+      "UserPool6BA7E5F2",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/UserPool/PostConfirmationCognito"
+   }
+  },
+  "UserPoolsmsRole4EA729DD": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Condition": {
+        "StringEquals": {
+         "sts:ExternalId": "TradingTrackerAfSouth1StackUserPool3DEC38B8"
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "cognito-idp.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Policies": [
+     {
+      "PolicyDocument": {
+       "Statement": [
+        {
+         "Action": "sns:Publish",
+         "Effect": "Allow",
+         "Resource": "*"
+        }
+       ],
+       "Version": "2012-10-17"
+      },
+      "PolicyName": "sns-publish"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/UserPool/smsRole/Resource"
+   }
+  },
+  "UserPool6BA7E5F2": {
+   "Type": "AWS::Cognito::UserPool",
+   "Properties": {
+    "AccountRecoverySetting": {
+     "RecoveryMechanisms": [
+      {
+       "Name": "verified_phone_number",
+       "Priority": 1
+      },
+      {
+       "Name": "verified_email",
+       "Priority": 2
+      }
+     ]
+    },
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": false
+    },
+    "AutoVerifiedAttributes": [
+     "email",
+     "phone_number"
+    ],
+    "EmailVerificationMessage": "The verification code to your new account is {####}",
+    "EmailVerificationSubject": "Verify your new account",
+    "LambdaConfig": {
+     "PostConfirmation": {
+      "Fn::GetAtt": [
+       "PostConfirmationAddTraderFunctionDB11EF34",
+       "Arn"
+      ]
+     }
+    },
+    "Policies": {
+     "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": true,
+      "RequireUppercase": true
+     }
+    },
+    "Schema": [
+     {
+      "Mutable": true,
+      "Name": "email",
+      "Required": true
+     },
+     {
+      "Mutable": true,
+      "Name": "phone_number",
+      "Required": true
+     }
+    ],
+    "SmsConfiguration": {
+     "ExternalId": "TradingTrackerAfSouth1StackUserPool3DEC38B8",
+     "SnsCallerArn": {
+      "Fn::GetAtt": [
+       "UserPoolsmsRole4EA729DD",
+       "Arn"
+      ]
+     }
+    },
+    "SmsVerificationMessage": "The verification code to your new account is {####}",
+    "UserPoolName": "tradingtracker-prod-users",
+    "UserPoolTags": {
+     "Application": "TradingTrackerWeb",
+     "CostCenter": "Trading",
+     "Environment": "prod",
+     "ManagedBy": "CDK",
+     "Owner": "Pile",
+     "Project": "TradingTracker",
+     "Repository": "garethpile/tradingtracker"
+    },
+    "UsernameAttributes": [
+     "email",
+     "phone_number"
+    ],
+    "VerificationMessageTemplate": {
+     "DefaultEmailOption": "CONFIRM_WITH_CODE",
+     "EmailMessage": "The verification code to your new account is {####}",
+     "EmailSubject": "Verify your new account",
+     "SmsMessage": "The verification code to your new account is {####}"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/UserPool/Resource"
+   }
+  },
+  "AdministratorsGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "GroupName": "Administrators",
+    "Precedence": 0,
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/AdministratorsGroup"
+   }
+  },
+  "TradersGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "GroupName": "Traders",
+    "Precedence": 1,
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradersGroup"
+   }
+  },
+  "UserPoolClient2F5918F7": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Properties": {
+    "AllowedOAuthFlows": [
+     "implicit",
+     "code"
+    ],
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthScopes": [
+     "profile",
+     "phone",
+     "email",
+     "openid",
+     "aws.cognito.signin.user.admin"
+    ],
+    "CallbackURLs": [
+     "https://example.com"
+    ],
+    "ClientName": "tradingtracker-web",
+    "ExplicitAuthFlows": [
+     "ALLOW_USER_PASSWORD_AUTH",
+     "ALLOW_USER_SRP_AUTH",
+     "ALLOW_REFRESH_TOKEN_AUTH"
+    ],
+    "SupportedIdentityProviders": [
+     "COGNITO"
+    ],
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/UserPoolClient/Resource"
+   }
+  },
+  "IdentityPool": {
+   "Type": "AWS::Cognito::IdentityPool",
+   "Properties": {
+    "AllowUnauthenticatedIdentities": true,
+    "CognitoIdentityProviders": [
+     {
+      "ClientId": {
+       "Ref": "UserPoolClient2F5918F7"
+      },
+      "ProviderName": {
+       "Fn::GetAtt": [
+        "UserPool6BA7E5F2",
+        "ProviderName"
+       ]
+      }
+     }
+    ],
+    "IdentityPoolName": "tradingtrackerProdIdentityPool",
+    "IdentityPoolTags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/IdentityPool"
+   }
+  },
+  "AuthenticatedIdentityRole9252D1CB": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRoleWithWebIdentity",
+       "Condition": {
+        "StringEquals": {
+         "cognito-identity.amazonaws.com:aud": {
+          "Ref": "IdentityPool"
+         }
+        },
+        "ForAnyValue:StringLike": {
+         "cognito-identity.amazonaws.com:amr": "authenticated"
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Federated": "cognito-identity.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/AuthenticatedIdentityRole/Resource"
+   }
+  },
+  "UnauthenticatedIdentityRoleD75DC3C0": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRoleWithWebIdentity",
+       "Condition": {
+        "StringEquals": {
+         "cognito-identity.amazonaws.com:aud": {
+          "Ref": "IdentityPool"
+         }
+        },
+        "ForAnyValue:StringLike": {
+         "cognito-identity.amazonaws.com:amr": "unauthenticated"
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Federated": "cognito-identity.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/UnauthenticatedIdentityRole/Resource"
+   }
+  },
+  "IdentityPoolRoleAttachment": {
+   "Type": "AWS::Cognito::IdentityPoolRoleAttachment",
+   "Properties": {
+    "IdentityPoolId": {
+     "Ref": "IdentityPool"
+    },
+    "Roles": {
+     "authenticated": {
+      "Fn::GetAtt": [
+       "AuthenticatedIdentityRole9252D1CB",
+       "Arn"
+      ]
+     },
+     "unauthenticated": {
+      "Fn::GetAtt": [
+       "UnauthenticatedIdentityRoleD75DC3C0",
+       "Arn"
+      ]
+     }
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/IdentityPoolRoleAttachment"
+   }
+  },
+  "TradingApiFunctionServiceRole06156DCF": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingApiFunction/ServiceRole/Resource"
+   }
+  },
+  "TradingApiFunctionServiceRoleDefaultPolicy74757A25": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "TradingTrackerTable2DABF34E",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "TradingTrackerTable2DABF34E",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "TradingApiFunctionServiceRoleDefaultPolicy74757A25",
+    "Roles": [
+     {
+      "Ref": "TradingApiFunctionServiceRole06156DCF"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingApiFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "TradingApiFunctionF8F2FF36": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-732439976770-af-south-1",
+     "S3Key": "64dab098da4b97aef26cec4f6ed6e5a5769906fe11ad58ae198c138ead4f54d7.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "TRADING_TRACKER_TABLE_NAME": {
+       "Ref": "TradingTrackerTable2DABF34E"
+      }
+     }
+    },
+    "FunctionName": "tradingtracker-trading-api",
+    "Handler": "index.handler",
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionServiceRole06156DCF",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ],
+    "Timeout": 20
+   },
+   "DependsOn": [
+    "TradingApiFunctionServiceRoleDefaultPolicy74757A25",
+    "TradingApiFunctionServiceRole06156DCF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingApiFunction/Resource",
+    "aws:asset:path": "asset.64dab098da4b97aef26cec4f6ed6e5a5769906fe11ad58ae198c138ead4f54d7",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "TelegramOcrFunctionServiceRole2BA53B2B": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramOcrFunction/ServiceRole/Resource"
+   }
+  },
+  "TelegramOcrFunctionServiceRoleDefaultPolicy689DE1A6": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "TradingTrackerTable2DABF34E",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "TelegramScreenshotBucket2ED1FFF4",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "TelegramScreenshotBucket2ED1FFF4",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "TelegramSecretB69F6981"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "TelegramOcrFunctionServiceRoleDefaultPolicy689DE1A6",
+    "Roles": [
+     {
+      "Ref": "TelegramOcrFunctionServiceRole2BA53B2B"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramOcrFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "TelegramOcrFunction3F229964": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "ImageUri": {
+      "Fn::Sub": "732439976770.dkr.ecr.af-south-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-732439976770-af-south-1:d553151a5f3fad202ebfe5f3ee091c6c7c26acb5c799ce5d58595617da7eb283"
+     }
+    },
+    "Environment": {
+     "Variables": {
+      "TRADING_TRACKER_TABLE_NAME": {
+       "Ref": "TradingTrackerTable2DABF34E"
+      },
+      "TELEGRAM_SECRET_NAME": {
+       "Fn::Select": [
+        0,
+        {
+         "Fn::Split": [
+          "-",
+          {
+           "Fn::Select": [
+            6,
+            {
+             "Fn::Split": [
+              ":",
+              {
+               "Ref": "TelegramSecretB69F6981"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "FunctionName": "tradingtracker-telegram-ocr",
+    "MemorySize": 2048,
+    "PackageType": "Image",
+    "Role": {
+     "Fn::GetAtt": [
+      "TelegramOcrFunctionServiceRole2BA53B2B",
+      "Arn"
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ],
+    "Timeout": 120
+   },
+   "DependsOn": [
+    "TelegramOcrFunctionServiceRoleDefaultPolicy689DE1A6",
+    "TelegramOcrFunctionServiceRole2BA53B2B"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramOcrFunction/Resource",
+    "aws:asset:path": "asset.d553151a5f3fad202ebfe5f3ee091c6c7c26acb5c799ce5d58595617da7eb283",
+    "aws:asset:dockerfile-path": "Dockerfile",
+    "aws:asset:property": "Code.ImageUri"
+   }
+  },
+  "TelegramWebhookFunctionServiceRoleCBB598D6": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramWebhookFunction/ServiceRole/Resource"
+   }
+  },
+  "TelegramWebhookFunctionServiceRoleDefaultPolicyB3009A73": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "TelegramScreenshotBucket2ED1FFF4",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "TelegramScreenshotBucket2ED1FFF4",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "TelegramSecretB69F6981"
+       }
+      },
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "TelegramOcrFunction3F229964",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "TelegramOcrFunction3F229964",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "TelegramWebhookFunctionServiceRoleDefaultPolicyB3009A73",
+    "Roles": [
+     {
+      "Ref": "TelegramWebhookFunctionServiceRoleCBB598D6"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramWebhookFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "TelegramWebhookFunction01A52A1C": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-732439976770-af-south-1",
+     "S3Key": "093949718143f4c40675ae82897b84d444f0a8b81ba2343382818174edf9232a.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "TELEGRAM_SCREENSHOT_BUCKET_NAME": {
+       "Ref": "TelegramScreenshotBucket2ED1FFF4"
+      },
+      "TELEGRAM_OCR_FUNCTION_NAME": {
+       "Ref": "TelegramOcrFunction3F229964"
+      },
+      "TELEGRAM_SECRET_NAME": {
+       "Fn::Select": [
+        0,
+        {
+         "Fn::Split": [
+          "-",
+          {
+           "Fn::Select": [
+            6,
+            {
+             "Fn::Split": [
+              ":",
+              {
+               "Ref": "TelegramSecretB69F6981"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    "FunctionName": "tradingtracker-telegram-webhook",
+    "Handler": "index.handler",
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "TelegramWebhookFunctionServiceRoleCBB598D6",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ],
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "TelegramWebhookFunctionServiceRoleDefaultPolicyB3009A73",
+    "TelegramWebhookFunctionServiceRoleCBB598D6"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TelegramWebhookFunction/Resource",
+    "aws:asset:path": "asset.093949718143f4c40675ae82897b84d444f0a8b81ba2343382818174edf9232a",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "TradingTrackerApiB87FACFC": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Name": "TradingTrackerApi",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Resource"
+   }
+  },
+  "TradingTrackerApiCloudWatchRoleADA5C098": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/CloudWatchRole/Resource"
+   }
+  },
+  "TradingTrackerApiAccount644C7FDA": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "TradingTrackerApiCloudWatchRoleADA5C098",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "TradingTrackerApiB87FACFC"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Account"
+   }
+  },
+  "TradingTrackerApiDeploymentAF95F7C89deadf238b9548d08c8f2258b34a5c1b": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Automatically created by the RestApi construct",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "DependsOn": [
+    "TradingTrackerApianalysisDELETE66388EE6",
+    "TradingTrackerApianalysisGETD9CAF593",
+    "TradingTrackerApianalysisOPTIONS53E3A66F",
+    "TradingTrackerApianalysisPOST7343C2BF",
+    "TradingTrackerApianalysisE761CCE3",
+    "TradingTrackerApianalysistrendsGET42F9B4D6",
+    "TradingTrackerApianalysistrendsOPTIONS7927AEF9",
+    "TradingTrackerApianalysistrends9705F790",
+    "TradingTrackerApichecksGET909A369D",
+    "TradingTrackerApichecksOPTIONS0DB6275C",
+    "TradingTrackerApichecksPOSTE7BCF4EB",
+    "TradingTrackerApichecks0C2994A2",
+    "TradingTrackerApicheckstrendsGETE0C13AA6",
+    "TradingTrackerApicheckstrendsOPTIONSDC404C48",
+    "TradingTrackerApicheckstrends137F902D",
+    "TradingTrackerApiconfluencesbaseDELETEA65887CB",
+    "TradingTrackerApiconfluencesbaseGET329CFE3C",
+    "TradingTrackerApiconfluencesbaseOPTIONS21503455",
+    "TradingTrackerApiconfluencesbasePOST4C9DBAC3",
+    "TradingTrackerApiconfluencesbaseDCD1EEEB",
+    "TradingTrackerApiconfluencesDELETEFD9C9F93",
+    "TradingTrackerApiconfluencesGET4761077B",
+    "TradingTrackerApiconfluencesOPTIONS4D3FA925",
+    "TradingTrackerApiconfluencesPOST39CCFAA4",
+    "TradingTrackerApiconfluences7C75276D",
+    "TradingTrackerApiOPTIONS6BDECC49",
+    "TradingTrackerApitelegramOPTIONS2343DFBD",
+    "TradingTrackerApitelegram156D9AF6",
+    "TradingTrackerApitelegramwebhookOPTIONSE9F35E48",
+    "TradingTrackerApitelegramwebhookPOST25F635B6",
+    "TradingTrackerApitelegramwebhook17DE0A83",
+    "TradingTrackerApitradesDELETE1B0A6F8F",
+    "TradingTrackerApitradesGET4BDE22B2",
+    "TradingTrackerApitradesOPTIONS2646652B",
+    "TradingTrackerApitradesPOST48EAE01C",
+    "TradingTrackerApitradesB6A964A8",
+    "TradingTrackerApitradestrendsGETDE9CF9AC",
+    "TradingTrackerApitradestrendsOPTIONS4CFC80AD",
+    "TradingTrackerApitradestrendsD5E50556"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "TradingTrackerApiDeploymentStageprodA437C3E2": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "DeploymentId": {
+     "Ref": "TradingTrackerApiDeploymentAF95F7C89deadf238b9548d08c8f2258b34a5c1b"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    },
+    "StageName": "prod",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "DependsOn": [
+    "TradingTrackerApiAccount644C7FDA"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/DeploymentStage.prod/Resource"
+   }
+  },
+  "TradingTrackerApiOPTIONS6BDECC49": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "TradingTrackerApiB87FACFC",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApichecks0C2994A2": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "TradingTrackerApiB87FACFC",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "checks",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/Resource"
+   }
+  },
+  "TradingTrackerApichecksOPTIONS0DB6275C": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApichecks0C2994A2"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApicheckstrends137F902D": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "TradingTrackerApichecks0C2994A2"
+    },
+    "PathPart": "trends",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/trends/Resource"
+   }
+  },
+  "TradingTrackerApicheckstrendsOPTIONSDC404C48": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApicheckstrends137F902D"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/trends/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApicheckstrendsGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETcheckstrends9C89AA5B": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/checks/trends"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/trends/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..checks.trends"
+   }
+  },
+  "TradingTrackerApicheckstrendsGETE0C13AA6": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApicheckstrends137F902D"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/trends/GET/Resource"
+   }
+  },
+  "TradingTrackerApichecksPOSTApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EPOSTchecksDA2AD27B": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/POST/checks"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/POST/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.POST..checks"
+   }
+  },
+  "TradingTrackerApichecksPOSTE7BCF4EB": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApichecks0C2994A2"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/POST/Resource"
+   }
+  },
+  "TradingTrackerApichecksGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETchecks8034A735": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/checks"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..checks"
+   }
+  },
+  "TradingTrackerApichecksGET909A369D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApichecks0C2994A2"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/checks/GET/Resource"
+   }
+  },
+  "TradingTrackerApianalysisE761CCE3": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "TradingTrackerApiB87FACFC",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "analysis",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/Resource"
+   }
+  },
+  "TradingTrackerApianalysisOPTIONS53E3A66F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApianalysisE761CCE3"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApianalysistrends9705F790": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "TradingTrackerApianalysisE761CCE3"
+    },
+    "PathPart": "trends",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/trends/Resource"
+   }
+  },
+  "TradingTrackerApianalysistrendsOPTIONS7927AEF9": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApianalysistrends9705F790"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/trends/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApianalysistrendsGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETanalysistrendsC880FDBD": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/analysis/trends"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/trends/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..analysis.trends"
+   }
+  },
+  "TradingTrackerApianalysistrendsGET42F9B4D6": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApianalysistrends9705F790"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/trends/GET/Resource"
+   }
+  },
+  "TradingTrackerApianalysisPOSTApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EPOSTanalysisA9155A71": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/POST/analysis"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/POST/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.POST..analysis"
+   }
+  },
+  "TradingTrackerApianalysisPOST7343C2BF": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApianalysisE761CCE3"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/POST/Resource"
+   }
+  },
+  "TradingTrackerApianalysisGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETanalysisFAC7C2DA": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/analysis"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..analysis"
+   }
+  },
+  "TradingTrackerApianalysisGETD9CAF593": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApianalysisE761CCE3"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/GET/Resource"
+   }
+  },
+  "TradingTrackerApianalysisDELETEApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EDELETEanalysis3D3ACF54": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/DELETE/analysis"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/DELETE/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.DELETE..analysis"
+   }
+  },
+  "TradingTrackerApianalysisDELETE66388EE6": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApianalysisE761CCE3"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/analysis/DELETE/Resource"
+   }
+  },
+  "TradingTrackerApitradesB6A964A8": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "TradingTrackerApiB87FACFC",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "trades",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/Resource"
+   }
+  },
+  "TradingTrackerApitradesOPTIONS2646652B": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApitradesB6A964A8"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApitradestrendsD5E50556": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "TradingTrackerApitradesB6A964A8"
+    },
+    "PathPart": "trends",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/trends/Resource"
+   }
+  },
+  "TradingTrackerApitradestrendsOPTIONS4CFC80AD": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApitradestrendsD5E50556"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/trends/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApitradestrendsGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETtradestrendsAD713A24": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/trades/trends"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/trends/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..trades.trends"
+   }
+  },
+  "TradingTrackerApitradestrendsGETDE9CF9AC": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApitradestrendsD5E50556"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/trends/GET/Resource"
+   }
+  },
+  "TradingTrackerApitradesPOSTApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EPOSTtrades47C0A5B3": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/POST/trades"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/POST/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.POST..trades"
+   }
+  },
+  "TradingTrackerApitradesPOST48EAE01C": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApitradesB6A964A8"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/POST/Resource"
+   }
+  },
+  "TradingTrackerApitradesGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETtrades39077D84": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/trades"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..trades"
+   }
+  },
+  "TradingTrackerApitradesGET4BDE22B2": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApitradesB6A964A8"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/GET/Resource"
+   }
+  },
+  "TradingTrackerApitradesDELETEApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EDELETEtrades6103F30B": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/DELETE/trades"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/DELETE/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.DELETE..trades"
+   }
+  },
+  "TradingTrackerApitradesDELETE1B0A6F8F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApitradesB6A964A8"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/trades/DELETE/Resource"
+   }
+  },
+  "TradingTrackerApiconfluences7C75276D": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "TradingTrackerApiB87FACFC",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "confluences",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesOPTIONS4D3FA925": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluences7C75276D"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesbaseDCD1EEEB": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "TradingTrackerApiconfluences7C75276D"
+    },
+    "PathPart": "base",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesbaseOPTIONS21503455": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluencesbaseDCD1EEEB"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesbaseGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETconfluencesbase8075696C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/confluences/base"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..confluences.base"
+   }
+  },
+  "TradingTrackerApiconfluencesbaseGET329CFE3C": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluencesbaseDCD1EEEB"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/GET/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesbasePOSTApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EPOSTconfluencesbase712D9275": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/POST/confluences/base"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/POST/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.POST..confluences.base"
+   }
+  },
+  "TradingTrackerApiconfluencesbasePOST4C9DBAC3": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluencesbaseDCD1EEEB"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/POST/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesbaseDELETEApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EDELETEconfluencesbase569F44D1": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/DELETE/confluences/base"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/DELETE/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.DELETE..confluences.base"
+   }
+  },
+  "TradingTrackerApiconfluencesbaseDELETEA65887CB": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluencesbaseDCD1EEEB"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/base/DELETE/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesGETApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EGETconfluences4D2C492A": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/GET/confluences"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/GET/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.GET..confluences"
+   }
+  },
+  "TradingTrackerApiconfluencesGET4761077B": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluences7C75276D"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/GET/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesPOSTApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EPOSTconfluences746DED2F": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/POST/confluences"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/POST/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.POST..confluences"
+   }
+  },
+  "TradingTrackerApiconfluencesPOST39CCFAA4": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluences7C75276D"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/POST/Resource"
+   }
+  },
+  "TradingTrackerApiconfluencesDELETEApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EDELETEconfluences8DFBAAA1": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TradingApiFunctionF8F2FF36",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/DELETE/confluences"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/DELETE/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.DELETE..confluences"
+   }
+  },
+  "TradingTrackerApiconfluencesDELETEFD9C9F93": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "COGNITO_USER_POOLS",
+    "AuthorizerId": {
+     "Ref": "ApiCognitoAuthorizer1CAC2F3D"
+    },
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TradingApiFunctionF8F2FF36",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApiconfluences7C75276D"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/confluences/DELETE/Resource"
+   }
+  },
+  "TradingTrackerApitelegram156D9AF6": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "TradingTrackerApiB87FACFC",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "telegram",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/telegram/Resource"
+   }
+  },
+  "TradingTrackerApitelegramOPTIONS2343DFBD": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApitelegram156D9AF6"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/telegram/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApitelegramwebhook17DE0A83": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "TradingTrackerApitelegram156D9AF6"
+    },
+    "PathPart": "webhook",
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/telegram/webhook/Resource"
+   }
+  },
+  "TradingTrackerApitelegramwebhookOPTIONSE9F35E48": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "TradingTrackerApitelegramwebhook17DE0A83"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/telegram/webhook/OPTIONS/Resource"
+   }
+  },
+  "TradingTrackerApitelegramwebhookPOSTApiPermissionTradingTrackerAfSouth1StackTradingTrackerApiE99B814EPOSTtelegramwebhookDBC6FCE9": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TelegramWebhookFunction01A52A1C",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:af-south-1:732439976770:",
+       {
+        "Ref": "TradingTrackerApiB87FACFC"
+       },
+       "/",
+       {
+        "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+       },
+       "/POST/telegram/webhook"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/telegram/webhook/POST/ApiPermission.TradingTrackerAfSouth1StackTradingTrackerApiE99B814E.POST..telegram.webhook"
+   }
+  },
+  "TradingTrackerApitelegramwebhookPOST25F635B6": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:af-south-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TelegramWebhookFunction01A52A1C",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "TradingTrackerApitelegramwebhook17DE0A83"
+    },
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/TradingTrackerApi/Default/telegram/webhook/POST/Resource"
+   }
+  },
+  "ApiCognitoAuthorizer1CAC2F3D": {
+   "Type": "AWS::ApiGateway::Authorizer",
+   "Properties": {
+    "IdentitySource": "method.request.header.Authorization",
+    "Name": "TradingTrackerAfSouth1StackApiCognitoAuthorizerC786A8B7",
+    "ProviderARNs": [
+     {
+      "Fn::GetAtt": [
+       "UserPool6BA7E5F2",
+       "Arn"
+      ]
+     }
+    ],
+    "RestApiId": {
+     "Ref": "TradingTrackerApiB87FACFC"
+    },
+    "Type": "COGNITO_USER_POOLS"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/ApiCognitoAuthorizer/Resource"
+   }
+  },
+  "WebOriginAccessIdentityD2E53C1C": {
+   "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+   "Properties": {
+    "CloudFrontOriginAccessIdentityConfig": {
+     "Comment": "Allows CloudFront to reach the bucket"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/WebOriginAccessIdentity/Resource"
+   }
+  },
+  "WebDistribution59C46482": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "CustomErrorResponses": [
+      {
+       "ErrorCachingMinTTL": 300,
+       "ErrorCode": 403,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      },
+      {
+       "ErrorCachingMinTTL": 300,
+       "ErrorCode": 404,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      }
+     ],
+     "DefaultCacheBehavior": {
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "TargetOriginId": "TradingTrackerAfSouth1StackWebDistributionOrigin18E918F72",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "DefaultRootObject": "index.html",
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "WebHostingBucket56BD56D7",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "TradingTrackerAfSouth1StackWebDistributionOrigin18E918F72",
+       "S3OriginConfig": {
+        "OriginAccessIdentity": {
+         "Fn::Join": [
+          "",
+          [
+           "origin-access-identity/cloudfront/",
+           {
+            "Ref": "WebOriginAccessIdentityD2E53C1C"
+           }
+          ]
+         ]
+        }
+       }
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/WebDistribution/Resource"
+   }
+  },
+  "DeployWebAssetsAwsCliLayer250A2C69": {
+   "Type": "AWS::Lambda::LayerVersion",
+   "Properties": {
+    "Content": {
+     "S3Bucket": "cdk-hnb659fds-assets-732439976770-af-south-1",
+     "S3Key": "0cfdecad2260a3a84ad0c2d08a77e03c9d25e26c7b52f26b1e1faf97aef92f18.zip"
+    },
+    "Description": "/opt/awscli/aws"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/DeployWebAssets/AwsCliLayer/Resource",
+    "aws:asset:path": "asset.0cfdecad2260a3a84ad0c2d08a77e03c9d25e26c7b52f26b1e1faf97aef92f18.zip",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Content"
+   }
+  },
+  "DeployWebAssetsCustomResourceAF550962": {
+   "Type": "Custom::CDKBucketDeployment",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536",
+      "Arn"
+     ]
+    },
+    "SourceBucketNames": [
+     "cdk-hnb659fds-assets-732439976770-af-south-1"
+    ],
+    "SourceObjectKeys": [
+     "740d012f75e5e8ae5097bd2e74302e85c095499b428930fa632f10f38b6acc85.zip"
+    ],
+    "DestinationBucketName": {
+     "Ref": "WebHostingBucket56BD56D7"
+    },
+    "WaitForDistributionInvalidation": true,
+    "Prune": true,
+    "DistributionId": {
+     "Ref": "WebDistribution59C46482"
+    },
+    "DistributionPaths": [
+     "/*"
+    ],
+    "OutputObjectKeys": true
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/DeployWebAssets/CustomResource/Default"
+   }
+  },
+  "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/Resource"
+   }
+  },
+  "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":s3:::cdk-hnb659fds-assets-732439976770-af-south-1"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":s3:::cdk-hnb659fds-assets-732439976770-af-south-1/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "WebHostingBucket56BD56D7",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "WebHostingBucket56BD56D7",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "cloudfront:GetInvalidation",
+        "cloudfront:CreateInvalidation"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF",
+    "Roles": [
+     {
+      "Ref": "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C81C01536": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-732439976770-af-south-1",
+     "S3Key": "3423a042b818e31c1e34a19d6689ab2e5f9b70fcbe9e71df66f241b20a200bd9.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "AWS_CA_BUNDLE": "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+     }
+    },
+    "Handler": "index.handler",
+    "Layers": [
+     {
+      "Ref": "DeployWebAssetsAwsCliLayer250A2C69"
+     }
+    ],
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265",
+      "Arn"
+     ]
+    },
+    "Runtime": "python3.13",
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "TradingTrackerWeb"
+     },
+     {
+      "Key": "CostCenter",
+      "Value": "Trading"
+     },
+     {
+      "Key": "Environment",
+      "Value": "prod"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Owner",
+      "Value": "Pile"
+     },
+     {
+      "Key": "Project",
+      "Value": "TradingTracker"
+     },
+     {
+      "Key": "Repository",
+      "Value": "garethpile/tradingtracker"
+     }
+    ],
+    "Timeout": 900
+   },
+   "DependsOn": [
+    "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRoleDefaultPolicy88902FDF",
+    "CustomCDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756CServiceRole89A01265"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C/Resource",
+    "aws:asset:path": "asset.3423a042b818e31c1e34a19d6689ab2e5f9b70fcbe9e71df66f241b20a200bd9",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21Sy47bMAz8lr0rapMt0LPXwRYLtN1F0vYaKDLjMJElQ6QauIL/vZBlxz7kxBlqzMeYG7l5/irXT+pGK11dVwaPMu5Z6atQNzrEqrOqcdVRxl/qaECUJzuAXhBoD0yNsqoGL+N+4EmQUS/oWcaXoK85O6IcPpxB3c3pkWfyogh6YVRzrNTBugouJH8O4TVYzeisQNXIuHN5oCHOFTNK7Q9REQGTLFIQFbTGdQ1YlrnR9p6Y2slYnuy9SyoGvkGixLZOX8G/NaqGpeK76sD/AT9o9mhrA+zmGhPohXa1RXYy/ibwH86Z9PUj/M270IqJlQbB8vJ9zrxVYBm5myoseXKlYFb6nBcE7Q+jHYtNsjOgvdxB6wjZ+S75L1SLtWK4qU7GHRAXLQ5ez7DQ2gXLYnYxZRdsz6oeflAGOyAXvIah/A/gs6vS44im17HJiLNl0+JUBD47j//ADwPcWS+0caE6eWdZxnePNabxgGhyJOnLpHlNmoeKLRJ7PIbpxy55388DDpalldDWSfceuA083atJ53BQN9IGZXGj0uBwIaIMxK55tGYv0pHLC336u/ki12v5+elCiCsfLGMDcpfjf5bEx1yrAwAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TradingTrackerAfSouth1Stack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "TradingTrackerApiEndpoint97981BAA": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "TradingTrackerApiB87FACFC"
+      },
+      ".execute-api.af-south-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "Region": {
+   "Value": "af-south-1"
+  },
+  "TradingTrackerApiUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "TradingTrackerApiB87FACFC"
+      },
+      ".execute-api.af-south-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "TelegramWebhookUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "TradingTrackerApiB87FACFC"
+      },
+      ".execute-api.af-south-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "TradingTrackerApiDeploymentStageprodA437C3E2"
+      },
+      "/telegram/webhook"
+     ]
+    ]
+   }
+  },
+  "WebAppUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "WebDistribution59C46482",
+        "DomainName"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "UserPoolId": {
+   "Value": {
+    "Ref": "UserPool6BA7E5F2"
+   }
+  },
+  "UserPoolClientId": {
+   "Value": {
+    "Ref": "UserPoolClient2F5918F7"
+   }
+  },
+  "IdentityPoolId": {
+   "Value": {
+    "Ref": "IdentityPool"
+   }
+  },
+  "TelegramSecretName": {
+   "Value": {
+    "Fn::Select": [
+     0,
+     {
+      "Fn::Split": [
+       "-",
+       {
+        "Fn::Select": [
+         6,
+         {
+          "Fn::Split": [
+           ":",
+           {
+            "Ref": "TelegramSecretB69F6981"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "TelegramScreenshotBucketName": {
+   "Value": {
+    "Ref": "TelegramScreenshotBucket2ED1FFF4"
+   }
+  },
+  "HostingBucketName": {
+   "Value": {
+    "Ref": "WebHostingBucket56BD56D7"
+   }
+  },
+  "TableName": {
+   "Value": {
+    "Ref": "TradingTrackerTable2DABF34E"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

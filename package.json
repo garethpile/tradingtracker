@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "infra:synth": "AWS_PROFILE=sgp-af AWS_REGION=af-south-1 npx cdk synth",
+    "infra:deploy": "npm run build && AWS_PROFILE=sgp-af AWS_REGION=af-south-1 npx cdk deploy TradingTrackerAfSouth1Stack --require-approval never",
+    "infra:destroy": "AWS_PROFILE=sgp-af AWS_REGION=af-south-1 npx cdk destroy TradingTrackerAfSouth1Stack --force",
+    "config:pull": "AWS_PROFILE=sgp-af AWS_REGION=af-south-1 node scripts/write-app-config.mjs"
   },
   "dependencies": {
     "@aws-amplify/backend": "^1.20.0",
@@ -15,19 +19,24 @@
     "@aws-amplify/ui-react": "^6.14.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.990.0",
     "@aws-sdk/client-dynamodb": "^3.985.0",
+    "@aws-sdk/client-lambda": "^3.1014.0",
+    "@aws-sdk/client-s3": "^3.1014.0",
     "@aws-sdk/lib-dynamodb": "^3.985.0",
+    "@aws-sdk/s3-request-presigner": "^3.1014.0",
     "aws-amplify": "^6.16.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.1014.0",
     "@eslint/js": "^9.39.1",
     "@types/aws-lambda": "^8.10.160",
     "@types/node": "^24.10.12",
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.1.1",
+    "aws-cdk": "^2.1112.0",
     "aws-cdk-lib": "^2.237.1",
     "constructs": "^10.4.5",
     "esbuild": "^0.27.3",

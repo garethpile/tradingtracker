@@ -1,0 +1,49 @@
+{
+  "auth": {
+    "user_pool_id": "af-south-1_7GSY4qNVK",
+    "aws_region": "af-south-1",
+    "user_pool_client_id": "5lr2rcf7d2hoofa4g3ou7apra2",
+    "identity_pool_id": "af-south-1:e56cbc77-d403-412a-88a4-98d9bfd8562c",
+    "mfa_methods": [],
+    "standard_required_attributes": [
+      "email",
+      "phone_number"
+    ],
+    "username_attributes": [
+      "email",
+      "phone_number"
+    ],
+    "user_verification_types": [
+      "email",
+      "phone_number"
+    ],
+    "groups": [
+      {
+        "Administrators": {
+          "precedence": 0
+        }
+      },
+      {
+        "Traders": {
+          "precedence": 1
+        }
+      }
+    ],
+    "mfa_configuration": "NONE",
+    "password_policy": {
+      "min_length": 8,
+      "require_lowercase": true,
+      "require_numbers": true,
+      "require_symbols": true,
+      "require_uppercase": true
+    },
+    "unauthenticated_identities_enabled": true
+  },
+  "version": "1.4",
+  "custom": {
+    "region": "af-south-1",
+    "tradingTrackerApiUrl": "https://agdobtxv8d.execute-api.af-south-1.amazonaws.com/prod/",
+    "telegramWebhookUrl": "https://agdobtxv8d.execute-api.af-south-1.amazonaws.com/prod/telegram/webhook",
+    "webAppUrl": "https://d3t1f0id7cxjs1.cloudfront.net"
+  }
+}

@@ -1,4 +1,4 @@
-import { defineBackend } from '@aws-amplify/backend';
+import { defineBackend, secret } from '@aws-amplify/backend';
 import { CDKContextKey } from '@aws-amplify/platform-core';
 import { Duration, RemovalPolicy, Stack, Tags } from 'aws-cdk-lib';
 import {
@@ -10,14 +10,19 @@ import {
 } from 'aws-cdk-lib/aws-apigateway';
 import { AttributeType, BillingMode, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Bucket, HttpMethods } from 'aws-cdk-lib/aws-s3';
 import { auth } from './auth/resource';
 import { postConfirmationAddTrader } from './functions/postConfirmationAddTrader/resource';
+import { telegramOcr } from './functions/telegramOcr/resource';
+import { telegramWebhook } from './functions/telegramWebhook/resource';
 import { tradingApi } from './functions/tradingApi/resource';
 
 const backend = defineBackend({
   auth,
   tradingApi,
   postConfirmationAddTrader,
+  telegramWebhook,
+  telegramOcr,
 });
 
 const apiStack = backend.tradingApi.stack;
@@ -74,13 +79,58 @@ const checklistTable = new Table(apiStack, 'TradingChecklistTable', {
   removalPolicy: RemovalPolicy.RETAIN,
 });
 
-backend.tradingApi.resources.lambda.addEnvironment(
+const telegramScreenshotBucket = new Bucket(apiStack, 'TelegramScreenshotBucket', {
+  bucketName: `${tableName}-telegram-shots`,
+  removalPolicy: RemovalPolicy.RETAIN,
+  autoDeleteObjects: false,
+  cors: [
+    {
+      allowedMethods: [HttpMethods.GET],
+      allowedOrigins: ['*'],
+      allowedHeaders: ['*'],
+    },
+  ],
+});
+
+backend.tradingApi.addEnvironment(
   'TRADING_TRACKER_TABLE_NAME',
   checklistTable.tableName,
 );
-backend.postConfirmationAddTrader.resources.lambda.addEnvironment(
+backend.postConfirmationAddTrader.addEnvironment(
   'DEFAULT_TRADER_GROUP',
   'Traders',
+);
+backend.telegramWebhook.addEnvironment(
+  'TELEGRAM_SCREENSHOT_BUCKET_NAME',
+  telegramScreenshotBucket.bucketName,
+);
+backend.telegramWebhook.addEnvironment(
+  'TELEGRAM_OCR_FUNCTION_NAME',
+  backend.telegramOcr.resources.lambda.functionName,
+);
+backend.telegramWebhook.addEnvironment(
+  'TELEGRAM_BOT_TOKEN',
+  secret('TELEGRAM_BOT_TOKEN'),
+);
+backend.telegramWebhook.addEnvironment(
+  'TELEGRAM_WEBHOOK_SECRET',
+  secret('TELEGRAM_WEBHOOK_SECRET'),
+);
+backend.telegramWebhook.addEnvironment(
+  'TELEGRAM_ALLOWED_CHAT_IDS',
+  secret('TELEGRAM_ALLOWED_CHAT_IDS'),
+);
+backend.telegramWebhook.addEnvironment(
+  'TELEGRAM_TARGET_USER_ID',
+  secret('TELEGRAM_TARGET_USER_ID'),
+);
+backend.telegramOcr.addEnvironment(
+  'TRADING_TRACKER_TABLE_NAME',
+  checklistTable.tableName,
+);
+backend.telegramOcr.addEnvironment(
+  'TELEGRAM_BOT_TOKEN',
+  secret('TELEGRAM_BOT_TOKEN'),
 );
 
 backend.tradingApi.resources.lambda.addToRolePolicy(
@@ -89,8 +139,20 @@ backend.tradingApi.resources.lambda.addToRolePolicy(
     resources: [checklistTable.tableArn],
   }),
 );
-
-backend.tradingApi.resources.lambda.timeout = Duration.seconds(20);
+backend.telegramOcr.resources.lambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ['dynamodb:PutItem'],
+    resources: [checklistTable.tableArn],
+  }),
+);
+backend.telegramWebhook.resources.lambda.addToRolePolicy(
+  new PolicyStatement({
+    actions: ['lambda:InvokeFunction'],
+    resources: [backend.telegramOcr.resources.lambda.functionArn],
+  }),
+);
+telegramScreenshotBucket.grantReadWrite(backend.telegramWebhook.resources.lambda);
+telegramScreenshotBucket.grantRead(backend.telegramOcr.resources.lambda);
 
 const api = new RestApi(apiStack, 'TradingTrackerApi', {
   restApiName: 'TradingTrackerApi',
@@ -111,12 +173,14 @@ const analysis = api.root.addResource('analysis');
 const analysisTrends = analysis.addResource('trends');
 const trades = api.root.addResource('trades');
 const tradesTrends = trades.addResource('trends');
+const telegram = api.root.addResource('telegram');
+const telegramWebhookResource = telegram.addResource('webhook');
 const confluences = api.root.addResource('confluences');
 const confluencesBase = confluences.addResource('base');
-const tradingDays = api.root.addResource('trading-days');
-const tradingSessions = api.root.addResource('trading-sessions');
-const sessionTrades = api.root.addResource('session-trades');
 const integration = new LambdaIntegration(backend.tradingApi.resources.lambda, {
+  allowTestInvoke: false,
+});
+const telegramWebhookIntegration = new LambdaIntegration(backend.telegramWebhook.resources.lambda, {
   allowTestInvoke: false,
 });
 
@@ -175,49 +239,8 @@ tradesTrends.addMethod('GET', integration, {
   authorizer,
 });
 
-tradingDays.addMethod('GET', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-tradingDays.addMethod('POST', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-tradingDays.addMethod('DELETE', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-tradingSessions.addMethod('GET', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-tradingSessions.addMethod('POST', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-tradingSessions.addMethod('DELETE', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-sessionTrades.addMethod('GET', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-sessionTrades.addMethod('POST', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
-});
-
-sessionTrades.addMethod('DELETE', integration, {
-  authorizationType: AuthorizationType.COGNITO,
-  authorizer,
+telegramWebhookResource.addMethod('POST', telegramWebhookIntegration, {
+  authorizationType: AuthorizationType.NONE,
 });
 
 confluences.addMethod('GET', integration, {
@@ -254,5 +277,7 @@ backend.addOutput({
   custom: {
     region: Stack.of(api).region,
     tradingTrackerApiUrl: api.url,
+    telegramWebhookUrl: `${api.url}telegram/webhook`,
+    telegramScreenshotBucketName: telegramScreenshotBucket.bucketName,
   },
 });

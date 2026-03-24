@@ -1,0 +1,11 @@
+{
+  "name": "telegram-ocr-lambda",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.985.0",
+    "@aws-sdk/client-s3": "^3.990.0",
+    "@aws-sdk/lib-dynamodb": "^3.985.0"
+  }
+}

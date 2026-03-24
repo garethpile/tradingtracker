@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ClipboardEvent, FormEvent } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import outputs from '../amplify_outputs.json';
+import appConfig from '../app-config.json';
 import { extractFromScreenshot } from './services/screenshotExtraction';
 import './App.css';
 
@@ -160,33 +160,33 @@ type TradeLogItem = {
   totalProfit?: number;
   feelings?: string;
   comments?: string;
+  tradeStage?: string;
+  tradeMethod?: string;
+  tradeDetails?: string[];
+  mainConfluences?: string[];
+  additionalConfluences?: string[];
+  invalidatedConfluences?: string[];
+  commentLines?: string[];
+  telegramStructuredImport?: boolean;
   expertOpinion?: string;
   screenshotExtractedDetails?: string;
   chartLink?: string;
   chartImageData?: string;
+  chartImageBucket?: string;
+  chartImageKey?: string;
+  chartImageUrl?: string;
+  sourceChannel?: string;
+  sourceMessageId?: string;
+  sourceRawText?: string;
   journalScore: number;
-};
-
-type TradingDayItem = {
-  id: string;
-  createdAt: string;
-  tradingDate: string;
-  title?: string;
-  notes?: string;
 };
 
 type MarketAnalysisItem = AnalysisFormState & {
   id: string;
   createdAt: string;
-  dayId?: string;
   analysisTime?: string;
   analysisScore?: number;
   newsTime?: string;
-};
-
-type SessionTradeItem = TradeLogItem & {
-  dayId: string;
-  sessionId?: string;
 };
 
 type ConfluenceItem = {
@@ -341,12 +341,6 @@ const defaultAnalysisForm = (): AnalysisFormState => ({
   ],
 });
 
-const defaultTradingDayForm = () => ({
-  tradingDate: new Date().toISOString().slice(0, 10),
-  title: '',
-  notes: '',
-});
-
 const normalizeMarketStructureRows = (rows: unknown): AnalysisFormState['marketStructure'] => {
   const defaults = defaultAnalysisForm().marketStructure;
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -373,7 +367,7 @@ const normalizeMarketStructureRows = (rows: unknown): AnalysisFormState['marketS
 };
 
 const outputConfig = {
-  apiUrl: (outputs as { custom?: { tradingTrackerApiUrl?: string } }).custom?.tradingTrackerApiUrl
+  apiUrl: (appConfig as { custom?: { tradingTrackerApiUrl?: string } }).custom?.tradingTrackerApiUrl
     || (import.meta.env.VITE_TRADING_API_URL as string | undefined)
     || '',
 };
@@ -665,6 +659,29 @@ const getDisplayedTradeProfit = (trade: TradeLogItem): number | undefined => {
   return recomputed ?? trade.totalProfit;
 };
 
+const toStructuredHeading = (trade: TradeLogItem): string =>
+  [
+    trade.tradeDate,
+    trade.tradeSide?.toUpperCase(),
+    trade.tradingAsset,
+    trade.totalProfit !== undefined ? toFixed2OrDash(trade.totalProfit) : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+const getStructuredTradeDetails = (trade: TradeLogItem): string[] => {
+  if (trade.tradeDetails && trade.tradeDetails.length > 0) {
+    return trade.tradeDetails;
+  }
+
+  return [
+    trade.lotSize !== undefined ? `LOT: ${trade.lotSize}` : null,
+    trade.entryPrice !== undefined ? `ENTRY: ${trade.entryPrice}` : null,
+    trade.exitPrice !== undefined ? `EXIT: ${trade.exitPrice}` : null,
+    trade.totalProfit !== undefined ? `PROFIT: ${trade.totalProfit}` : null,
+  ].filter((value): value is string => Boolean(value));
+};
+
 const buildAuthHeader = async () => {
   const session = await fetchAuthSession();
   const token = session.tokens?.idToken?.toString();
@@ -678,7 +695,7 @@ const buildAuthHeader = async () => {
 
 const apiCall = async <T,>(path: string, init?: RequestInit): Promise<T> => {
   if (!outputConfig.apiUrl) {
-    throw new Error('API URL missing. Deploy backend and pull amplify_outputs.json.');
+    throw new Error('API URL missing. Deploy the af-south-1 stack and refresh app-config.json.');
   }
 
   const authHeader = await buildAuthHeader();
@@ -717,19 +734,18 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [analysisTime, setAnalysisTime] = useState(new Date().toTimeString().slice(0, 5));
 
   const [checklistHistory, setChecklistHistory] = useState<ChecklistItem[]>([]);
-  const [tradingDays, setTradingDays] = useState<TradingDayItem[]>([]);
-  const [dayTrades, setDayTrades] = useState<SessionTradeItem[]>([]);
-  const [dayAnalyses, setDayAnalyses] = useState<MarketAnalysisItem[]>([]);
+  const [tradeHistory, setTradeHistory] = useState<TradeLogItem[]>([]);
+  const [activeTradeChartUrl, setActiveTradeChartUrl] = useState('');
+  const [activeTradeItem, setActiveTradeItem] = useState<TradeLogItem | null>(null);
+  const [analysisItems, setAnalysisItems] = useState<MarketAnalysisItem[]>([]);
   const [selectedMarketAnalysisSession, setSelectedMarketAnalysisSession] = useState<MarketAnalysisSessionKey>('london');
-  const [selectedTradingDayId, setSelectedTradingDayId] = useState<string | null>(null);
-  const [editingSessionTrade, setEditingSessionTrade] = useState<{ id: string; createdAt: string } | null>(null);
+  const [selectedTradeDate, setSelectedTradeDate] = useState<string | null>(null);
+  const [editingTrade, setEditingTrade] = useState<{ id: string; createdAt: string } | null>(null);
   const [editingAnalysis, setEditingAnalysis] = useState<{ id: string; createdAt: string } | null>(null);
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
-  const [tradingDayDialogOpen, setTradingDayDialogOpen] = useState(false);
-  const [tradingDayForm, setTradingDayForm] = useState(defaultTradingDayForm);
-  const [tradingDayYearFilter, setTradingDayYearFilter] = useState('all');
-  const [tradingDayMonthFilter, setTradingDayMonthFilter] = useState('all');
-  const [tradingDaySearch, setTradingDaySearch] = useState('');
+  const [tradeDateYearFilter, setTradeDateYearFilter] = useState('all');
+  const [tradeDateMonthFilter, setTradeDateMonthFilter] = useState('all');
+  const [tradeDateSearch, setTradeDateSearch] = useState('');
   const [confluenceItems, setConfluenceItems] = useState<ConfluenceItem[]>([]);
   const [baseConfluences, setBaseConfluences] = useState<ConfluenceItem[]>([]);
   const [customConfluences, setCustomConfluences] = useState<ConfluenceItem[]>([]);
@@ -738,7 +754,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const [isAdmin, setIsAdmin] = useState(false);
   const [editingConfluenceKey, setEditingConfluenceKey] = useState<string | null>(null);
   const [editingConfluenceValue, setEditingConfluenceValue] = useState('');
-  const [tradingDaySectionOpen, setTradingDaySectionOpen] = useState({
+  const [tradeDateSectionOpen, setTradeDateSectionOpen] = useState({
     marketAnalysis: false,
     trades: true,
   });
@@ -789,9 +805,24 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   }, [confluenceItems]);
 
   const tradeProfitValue = computeTradeSetProfit(tradeForm.tradeEntries, tradeForm.tradeSide);
-  const selectedTradingDay = useMemo(
-    () => tradingDays.find((item) => item.id === selectedTradingDayId) ?? null,
-    [tradingDays, selectedTradingDayId],
+  const availableTradeDates = useMemo(
+    () => Array.from(new Set([
+      ...tradeHistory.map((item) => item.tradeDate),
+      ...analysisItems.map((item) => item.tradingDate),
+    ])).filter(Boolean).sort((a, b) => b.localeCompare(a)),
+    [analysisItems, tradeHistory],
+  );
+  const dayTrades = useMemo(
+    () => tradeHistory
+      .filter((item) => item.tradeDate === selectedTradeDate)
+      .sort((a, b) => `${b.tradeDate}T${b.tradeTime ?? ''}`.localeCompare(`${a.tradeDate}T${a.tradeTime ?? ''}`)),
+    [selectedTradeDate, tradeHistory],
+  );
+  const dayAnalyses = useMemo(
+    () => analysisItems
+      .filter((item) => item.tradingDate === selectedTradeDate)
+      .sort((a, b) => `${b.tradingDate}T${b.analysisTime ?? ''}`.localeCompare(`${a.tradingDate}T${a.analysisTime ?? ''}`)),
+    [analysisItems, selectedTradeDate],
   );
   const analysesBySession = useMemo(() => {
     const bySession: Partial<Record<MarketAnalysisSessionKey, MarketAnalysisItem>> = {};
@@ -812,23 +843,23 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     () => marketAnalysisSessionOptions.filter((option) => Boolean(analysesBySession[option.key])).length,
     [analysesBySession],
   );
-  const tradingDayYears = useMemo(
-    () => Array.from(new Set(tradingDays.map((item) => item.tradingDate.slice(0, 4)))).sort((a, b) => b.localeCompare(a)),
-    [tradingDays],
+  const tradeDateYears = useMemo(
+    () => Array.from(new Set(availableTradeDates.map((item) => item.slice(0, 4)))).sort((a, b) => b.localeCompare(a)),
+    [availableTradeDates],
   );
-  const filteredTradingDays = useMemo(
-    () => tradingDays
-      .filter((item) => (tradingDayYearFilter === 'all' ? true : item.tradingDate.slice(0, 4) === tradingDayYearFilter))
-      .filter((item) => (tradingDayMonthFilter === 'all' ? true : item.tradingDate.slice(5, 7) === tradingDayMonthFilter))
+  const filteredTradeDates = useMemo(
+    () => availableTradeDates
+      .filter((item) => (tradeDateYearFilter === 'all' ? true : item.slice(0, 4) === tradeDateYearFilter))
+      .filter((item) => (tradeDateMonthFilter === 'all' ? true : item.slice(5, 7) === tradeDateMonthFilter))
       .filter((item) => {
-        const q = tradingDaySearch.trim().toLowerCase();
+        const q = tradeDateSearch.trim().toLowerCase();
         if (!q) {
           return true;
         }
-        return item.tradingDate.toLowerCase().includes(q) || (item.title ?? '').toLowerCase().includes(q);
+        return item.toLowerCase().includes(q);
       })
-      .sort((a, b) => `${b.tradingDate}-${b.createdAt}`.localeCompare(`${a.tradingDate}-${a.createdAt}`)),
-    [tradingDays, tradingDayMonthFilter, tradingDaySearch, tradingDayYearFilter],
+      .sort((a, b) => b.localeCompare(a)),
+    [availableTradeDates, tradeDateMonthFilter, tradeDateSearch, tradeDateYearFilter],
   );
   const selectedLotConfig = useMemo(
     () => lotSizeOptions.find((option) => option.lotSize === selectedLotSize) ?? lotSizeOptions[1],
@@ -873,12 +904,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
   const toggleAnalysisSection = (section: keyof typeof analysisSectionOpen) => {
     setAnalysisSectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
   };
-  const toggleTradingDaySection = (section: keyof typeof tradingDaySectionOpen) => {
-    setTradingDaySectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
+  const toggleTradeDateSection = (section: keyof typeof tradeDateSectionOpen) => {
+    setTradeDateSectionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
   };
-  const openTradingDaysTab = () => {
+  const openTradesTab = () => {
     setActiveTab('trades');
-    setTradingDaySectionOpen((prev) => ({ ...prev, marketAnalysis: false }));
+    setTradeDateSectionOpen((prev) => ({ ...prev, marketAnalysis: false }));
   };
 
   useEffect(() => {
@@ -907,35 +938,13 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!selectedTradingDayId) {
-      setDayTrades([]);
-      setDayAnalyses([]);
-      return;
-    }
-
-    void (async () => {
-      try {
-        const [tradesRes, analysisRes] = await Promise.all([
-          apiCall<{ items: SessionTradeItem[] }>(`session-trades?dayId=${encodeURIComponent(selectedTradingDayId)}`),
-          apiCall<{ items: MarketAnalysisItem[] }>(`analysis?dayId=${encodeURIComponent(selectedTradingDayId)}`),
-        ]);
-        setDayTrades(tradesRes.items);
-        setDayAnalyses(
-          analysisRes.items.sort((a, b) => `${b.tradingDate}T${b.analysisTime ?? ''}`.localeCompare(`${a.tradingDate}T${a.analysisTime ?? ''}`)),
-        );
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load trading day data');
-      }
-    })();
-  }, [selectedTradingDayId]);
-
   const loadData = async (windowDays = days) => {
-    const [checksRes, checksTrendRes, confluencesRes, tradingDaysRes] = await Promise.all([
+    const [checksRes, checksTrendRes, confluencesRes, tradesRes, analysisRes] = await Promise.all([
       apiCall<{ items: ChecklistItem[] }>(`checks?days=${windowDays}`),
       apiCall<TrendResponse>(`checks/trends?days=${windowDays}`),
       apiCall<ConfluenceResponse>('confluences'),
-      apiCall<{ items: TradingDayItem[] }>(`trading-days?days=${windowDays}`),
+      apiCall<{ items: TradeLogItem[] }>(`trades?days=${windowDays}`),
+      apiCall<{ items: MarketAnalysisItem[] }>(`analysis?days=${windowDays}`),
     ]);
 
     setChecklistHistory(checksRes.items);
@@ -943,13 +952,20 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     setConfluenceItems(confluencesRes.items);
     setBaseConfluences(confluencesRes.base);
     setCustomConfluences(confluencesRes.custom);
-    setTradingDays(tradingDaysRes.items);
-    setSelectedTradingDayId((previous) => {
-      if (previous && tradingDaysRes.items.some((item) => item.id === previous)) {
+    setTradeHistory(tradesRes.items);
+    setAnalysisItems(analysisRes.items);
+
+    const nextAvailableTradeDates = Array.from(new Set([
+      ...tradesRes.items.map((item) => item.tradeDate),
+      ...analysisRes.items.map((item) => item.tradingDate),
+    ])).filter(Boolean).sort((a, b) => b.localeCompare(a));
+
+    setSelectedTradeDate((previous) => {
+      if (previous && nextAvailableTradeDates.includes(previous)) {
         return previous;
       }
 
-      return tradingDaysRes.items[0]?.id ?? null;
+      return nextAvailableTradeDates[0] ?? null;
     });
   };
 
@@ -986,70 +1002,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     }
   };
 
-  const refreshTradingDayTrades = async (dayId: string) => {
-    const [tradesRes, analysisRes] = await Promise.all([
-      apiCall<{ items: SessionTradeItem[] }>(`session-trades?dayId=${encodeURIComponent(dayId)}`),
-      apiCall<{ items: MarketAnalysisItem[] }>(`analysis?dayId=${encodeURIComponent(dayId)}`),
-    ]);
-    setDayTrades(tradesRes.items);
-    setDayAnalyses(
-      analysisRes.items.sort((a, b) => `${b.tradingDate}T${b.analysisTime ?? ''}`.localeCompare(`${a.tradingDate}T${a.analysisTime ?? ''}`)),
-    );
-  };
-
-  const saveTradingDay = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!tradingDayForm.tradingDate) {
-      setError('Trading day date is required');
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-    try {
-      const created = await apiCall<TradingDayItem>('trading-days', {
-        method: 'POST',
-        body: JSON.stringify(tradingDayForm),
-      });
-      setTradingDayForm(defaultTradingDayForm());
-      setTradingDayDialogOpen(false);
-      await loadData();
-      setSelectedTradingDayId(created.id);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save trading day');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const openCreateTradingDayDialog = () => {
-    setTradingDayForm(defaultTradingDayForm());
-    setTradingDayDialogOpen(true);
-  };
-
-  const deleteTradingDay = async (item: TradingDayItem) => {
-    const confirmed = window.confirm('Delete this trading day and all its trades?');
-    if (!confirmed) {
-      return;
-    }
-
-    setBusy(true);
-    setError(null);
-    try {
-      await apiCall<{ deleted: boolean }>(`trading-days?createdAt=${encodeURIComponent(item.createdAt)}&id=${encodeURIComponent(item.id)}`, {
-        method: 'DELETE',
-      });
-      await loadData();
-      setSelectedTradingDayId((current) => (current === item.id ? null : current));
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete trading day');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   useEffect(() => {
-    if (!selectedTradingDay) {
+    if (!selectedTradeDate) {
       setEditingAnalysis(null);
       setAnalysisForm(defaultAnalysisForm());
       setAnalysisTime(new Date().toTimeString().slice(0, 5));
@@ -1117,29 +1071,28 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     setEditingAnalysis(null);
     setAnalysisForm({
       ...defaultAnalysisForm(),
-      tradingDate: selectedTradingDay.tradingDate,
+      tradingDate: selectedTradeDate,
       sessionName: getMarketAnalysisSessionLabel(selectedMarketAnalysisSession),
     });
     setAnalysisTime(new Date().toTimeString().slice(0, 5));
-  }, [activeDayAnalysis, selectedTradingDay, selectedMarketAnalysisSession]);
+  }, [activeDayAnalysis, selectedTradeDate, selectedMarketAnalysisSession]);
 
   useEffect(() => {
-    if (!selectedTradingDayId) {
+    if (!selectedTradeDate) {
       return;
     }
     setSelectedMarketAnalysisSession('london');
-  }, [selectedTradingDayId]);
+  }, [selectedTradeDate]);
 
   const saveAnalysis = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedTradingDayId) {
-      setError('Select a trading day first');
+    if (!selectedTradeDate) {
+      setError('Select a trade date first');
       return;
     }
 
     const payload = {
       ...analysisForm,
-      dayId: selectedTradingDayId,
       sessionName: getMarketAnalysisSessionLabel(selectedMarketAnalysisSession),
       analysisTime,
     };
@@ -1158,7 +1111,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
           body: JSON.stringify(payload),
         });
       }
-      await refreshTradingDayTrades(selectedTradingDayId);
+      await loadData();
+      setSelectedTradeDate(payload.tradingDate);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save market analysis');
     } finally {
@@ -1181,13 +1135,11 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       await apiCall<{ deleted: boolean }>(`analysis?createdAt=${encodeURIComponent(editingAnalysis.createdAt)}&id=${encodeURIComponent(editingAnalysis.id)}`, {
         method: 'DELETE',
       });
-      if (selectedTradingDayId) {
-        await refreshTradingDayTrades(selectedTradingDayId);
-      }
+      await loadData();
       setEditingAnalysis(null);
       setAnalysisForm({
         ...defaultAnalysisForm(),
-        tradingDate: selectedTradingDay?.tradingDate ?? defaultAnalysisForm().tradingDate,
+        tradingDate: selectedTradeDate ?? defaultAnalysisForm().tradingDate,
       });
       setAnalysisTime(new Date().toTimeString().slice(0, 5));
     } catch (deleteError) {
@@ -1453,7 +1405,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     </form>
   );
 
-  const buildTradeEntriesFromItem = (item: SessionTradeItem): TradeLogFormState['tradeEntries'] => {
+  const buildTradeEntriesFromItem = (item: TradeLogItem): TradeLogFormState['tradeEntries'] => {
     if (item.tradeEntries && item.tradeEntries.length > 0) {
       return item.tradeEntries.map((entry) => ({
         id: entry.id ?? crypto.randomUUID(),
@@ -1483,9 +1435,11 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     }];
   };
 
-  const openTradeDialog = (item?: SessionTradeItem) => {
+  const openTradeDialog = (item?: TradeLogItem) => {
     if (item) {
-      setEditingSessionTrade({ id: item.id, createdAt: item.createdAt });
+      setActiveTradeItem(item);
+      setEditingTrade({ id: item.id, createdAt: item.createdAt });
+      setActiveTradeChartUrl(item.chartImageUrl ?? '');
       setTradeForm({
         tradeDate: item.tradeDate,
         tradeTime: item.tradeTime ?? '',
@@ -1503,10 +1457,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         chartImageData: item.chartImageData ?? '',
       });
     } else {
-      setEditingSessionTrade(null);
+      setActiveTradeItem(null);
+      setEditingTrade(null);
+      setActiveTradeChartUrl('');
       setTradeForm({
         ...defaultTradeForm(),
-        tradeDate: selectedTradingDay?.tradingDate ?? defaultTradeForm().tradeDate,
+        tradeDate: selectedTradeDate ?? defaultTradeForm().tradeDate,
       });
     }
     setTradeDialogOpen(true);
@@ -1514,20 +1470,15 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
 
   const closeTradeDialog = () => {
     setTradeDialogOpen(false);
-    setEditingSessionTrade(null);
+    setActiveTradeItem(null);
+    setEditingTrade(null);
+    setActiveTradeChartUrl('');
     setTradeForm(defaultTradeForm());
   };
 
-  const saveSessionTrade = async (event: FormEvent) => {
+  const saveTrade = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedTradingDayId) {
-      setError('Select a trading day first');
-      return;
-    }
-
     const payload = {
-      dayId: selectedTradingDayId,
-      sessionId: selectedTradingDayId,
       tradeDate: tradeForm.tradeDate,
       tradeTime: tradeForm.tradeTime,
       sessionName: tradeForm.sessionName,
@@ -1564,21 +1515,20 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     setBusy(true);
     setError(null);
     try {
-      if (editingSessionTrade) {
-        await apiCall<SessionTradeItem>(`session-trades?createdAt=${encodeURIComponent(editingSessionTrade.createdAt)}&id=${encodeURIComponent(editingSessionTrade.id)}`, {
+      if (editingTrade) {
+        await apiCall<TradeLogItem>(`trades?createdAt=${encodeURIComponent(editingTrade.createdAt)}&id=${encodeURIComponent(editingTrade.id)}`, {
           method: 'POST',
           body: JSON.stringify(payload),
         });
       } else {
-        await apiCall<SessionTradeItem>('session-trades', {
+        await apiCall<TradeLogItem>('trades', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
       }
 
-      if (selectedTradingDayId) {
-        await refreshTradingDayTrades(selectedTradingDayId);
-      }
+      await loadData();
+      setSelectedTradeDate(payload.tradeDate);
       closeTradeDialog();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to save trade');
@@ -1587,8 +1537,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     }
   };
 
-  const deleteSessionTrade = async () => {
-    if (!editingSessionTrade) {
+  const deleteTrade = async () => {
+    if (!editingTrade) {
       return;
     }
 
@@ -1600,12 +1550,10 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
     setBusy(true);
     setError(null);
     try {
-      await apiCall<{ deleted: boolean }>(`session-trades?createdAt=${encodeURIComponent(editingSessionTrade.createdAt)}&id=${encodeURIComponent(editingSessionTrade.id)}`, {
+      await apiCall<{ deleted: boolean }>(`trades?createdAt=${encodeURIComponent(editingTrade.createdAt)}&id=${encodeURIComponent(editingTrade.id)}`, {
         method: 'DELETE',
       });
-      if (selectedTradingDayId) {
-        await refreshTradingDayTrades(selectedTradingDayId);
-      }
+      await loadData();
       closeTradeDialog();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete trade');
@@ -1633,7 +1581,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
       setTradeForm((prev) => ({
         ...prev,
         chartImageData: dataUrl,
-        screenshotExtractedDetails: extraction.extractedText,
+        screenshotExtractedDetails: extraction.extractedSummary,
         expertOpinion: extraction.expertOpinion,
       }));
       setError(null);
@@ -1827,7 +1775,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         </div>
         <nav className="menu-tabs" aria-label="Dashboard sections">
           <button className={activeTab === 'tradeCalc' ? 'tab active' : 'tab'} onClick={() => setActiveTab('tradeCalc')}>Trade Calc</button>
-          <button className={activeTab === 'trades' ? 'tab active' : 'tab'} onClick={openTradingDaysTab}>Trading Days</button>
+          <button className={activeTab === 'trades' ? 'tab active' : 'tab'} onClick={openTradesTab}>Trades</button>
           <button className={activeTab === 'confluences' ? 'tab active' : 'tab'} onClick={() => setActiveTab('confluences')}>Confluences</button>
           <label className="window-select">
             Window
@@ -2045,20 +1993,20 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
         <>
           <section className="panel">
             <div className="panel-header">
-              <h2>Trading Days</h2>
-              <button type="button" className="icon-button add-icon-button" onClick={openCreateTradingDayDialog} title="Add trading day" aria-label="Add trading day">
+              <h2>Trade Dates</h2>
+              <button type="button" className="icon-button add-icon-button" onClick={() => openTradeDialog()} title="Add trade" aria-label="Add trade">
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M11 5h2v14h-2zM5 11h14v2H5z" fill="currentColor" /></svg>
               </button>
             </div>
             <div className="grid-3">
               <label>Year
-                <select value={tradingDayYearFilter} onChange={(event) => setTradingDayYearFilter(event.target.value)}>
+                <select value={tradeDateYearFilter} onChange={(event) => setTradeDateYearFilter(event.target.value)}>
                   <option value="all">All years</option>
-                  {tradingDayYears.map((year) => <option key={year} value={year}>{year}</option>)}
+                  {tradeDateYears.map((year) => <option key={year} value={year}>{year}</option>)}
                 </select>
               </label>
               <label>Month
-                <select value={tradingDayMonthFilter} onChange={(event) => setTradingDayMonthFilter(event.target.value)}>
+                <select value={tradeDateMonthFilter} onChange={(event) => setTradeDateMonthFilter(event.target.value)}>
                   <option value="all">All months</option>
                   {Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0')).map((month) => (
                     <option key={month} value={month}>{month}</option>
@@ -2066,39 +2014,37 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                 </select>
               </label>
               <label>Search
-                <input value={tradingDaySearch} onChange={(event) => setTradingDaySearch(event.target.value)} placeholder="Date or title" />
+                <input value={tradeDateSearch} onChange={(event) => setTradeDateSearch(event.target.value)} placeholder="Date" />
               </label>
             </div>
             <div className="history-table-wrapper">
               <table className="history-table">
-                <thead><tr><th>Date</th><th>Title</th><th /></tr></thead>
+                <thead><tr><th>Date</th><th>Trades</th><th>Analyses</th><th /></tr></thead>
                 <tbody>
-                  {filteredTradingDays.map((item) => (
-                    <tr key={item.id} className={selectedTradingDayId === item.id ? 'selected-row' : ''}>
-                      <td>{item.tradingDate}</td>
-                      <td>{item.title || '-'}</td>
+                  {filteredTradeDates.map((item) => (
+                    <tr key={item} className={selectedTradeDate === item ? 'selected-row' : ''}>
+                      <td>{item}</td>
+                      <td>{tradeHistory.filter((trade) => trade.tradeDate === item).length}</td>
+                      <td>{analysisItems.filter((analysis) => analysis.tradingDate === item).length}</td>
                       <td>
                         <div className="inline-actions">
-                          <button type="button" className={selectedTradingDayId === item.id ? '' : 'ghost'} onClick={() => setSelectedTradingDayId(item.id)}>
-                            {selectedTradingDayId === item.id ? 'Selected' : 'Open'}
-                          </button>
-                          <button type="button" className="icon-button" onClick={() => void deleteTradingDay(item)} title="Delete trading day" aria-label="Delete trading day">
-                            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z" fill="currentColor" /></svg>
+                          <button type="button" className={selectedTradeDate === item ? '' : 'ghost'} onClick={() => setSelectedTradeDate(item)}>
+                            {selectedTradeDate === item ? 'Selected' : 'Open'}
                           </button>
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {filteredTradingDays.length === 0 && <tr><td colSpan={3}>No trading days found.</td></tr>}
+                  {filteredTradeDates.length === 0 && <tr><td colSpan={4}>No trade dates found.</td></tr>}
                 </tbody>
               </table>
             </div>
           </section>
 
-          {selectedTradingDay && (
+          {selectedTradeDate && (
             <section className="panel">
-              <h2>Trading Day: {selectedTradingDay.tradingDate}</h2>
-              <p className="subtitle">{selectedTradingDay.title || 'No title'}{selectedTradingDay.notes ? ` | ${selectedTradingDay.notes}` : ''}</p>
+              <h2>Trade Date: {selectedTradeDate}</h2>
+              <p className="subtitle">{dayTrades.length} trade(s) and {dayAnalyses.length} market analysis capture(s).</p>
 
               <article className="confluence-manage-card">
                 <div className="panel-header">
@@ -2118,17 +2064,17 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                     <button
                       type="button"
                       className="icon-button collapse-icon-button"
-                      onClick={() => toggleTradingDaySection('marketAnalysis')}
-                      aria-label={tradingDaySectionOpen.marketAnalysis ? 'Collapse market analysis' : 'Expand market analysis'}
-                      title={tradingDaySectionOpen.marketAnalysis ? 'Collapse' : 'Expand'}
+                      onClick={() => toggleTradeDateSection('marketAnalysis')}
+                      aria-label={tradeDateSectionOpen.marketAnalysis ? 'Collapse market analysis' : 'Expand market analysis'}
+                      title={tradeDateSectionOpen.marketAnalysis ? 'Collapse' : 'Expand'}
                     >
                       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                        {tradingDaySectionOpen.marketAnalysis ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
+                        {tradeDateSectionOpen.marketAnalysis ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
                       </svg>
                     </button>
                   </div>
                 </div>
-                {tradingDaySectionOpen.marketAnalysis && renderMarketAnalysisForm()}
+                {tradeDateSectionOpen.marketAnalysis && renderMarketAnalysisForm()}
               </article>
 
               <article className="confluence-manage-card">
@@ -2141,17 +2087,17 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                     <button
                       type="button"
                       className="icon-button collapse-icon-button"
-                      onClick={() => toggleTradingDaySection('trades')}
-                      aria-label={tradingDaySectionOpen.trades ? 'Collapse trades' : 'Expand trades'}
-                      title={tradingDaySectionOpen.trades ? 'Collapse' : 'Expand'}
+                      onClick={() => toggleTradeDateSection('trades')}
+                      aria-label={tradeDateSectionOpen.trades ? 'Collapse trades' : 'Expand trades'}
+                      title={tradeDateSectionOpen.trades ? 'Collapse' : 'Expand'}
                     >
                       <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                        {tradingDaySectionOpen.trades ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
+                        {tradeDateSectionOpen.trades ? <path d="M7 14l5-5 5 5z" fill="currentColor" /> : <path d="M7 10l5 5 5-5z" fill="currentColor" />}
                       </svg>
                     </button>
                   </div>
                 </div>
-                {tradingDaySectionOpen.trades && (
+                {tradeDateSectionOpen.trades && (
                   <div className="history-table-wrapper">
                     <table className="history-table">
                       <thead><tr><th>Date</th><th>Time</th><th>Session</th><th>Asset</th><th>Side</th><th>Strategy</th><th>Trades</th><th>Profit</th><th>Chart</th><th /></tr></thead>
@@ -2169,6 +2115,8 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td>
                               {trade.chartLink ? (
                                 <a href={trade.chartLink} target="_blank" rel="noreferrer">Open link</a>
+                              ) : trade.chartImageUrl ? (
+                                <a href={trade.chartImageUrl} target="_blank" rel="noreferrer">Open image</a>
                               ) : trade.chartImageData ? (
                                 'Pasted image'
                               ) : (
@@ -2178,7 +2126,7 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                             <td><button type="button" className="ghost" onClick={() => openTradeDialog(trade)}>View / Edit</button></td>
                           </tr>
                         ))}
-                        {dayTrades.length === 0 && <tr><td colSpan={10}>No trade sets yet for this day.</td></tr>}
+                        {dayTrades.length === 0 && <tr><td colSpan={10}>No trades logged for this date.</td></tr>}
                       </tbody>
                     </table>
                   </div>
@@ -2192,10 +2140,69 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
             <div className="dialog-backdrop" role="dialog" aria-modal="true">
               <div className="dialog-card">
                 <div className="panel-header">
-                  <h3>{editingSessionTrade ? 'Manage Trade Set' : 'Create Trade Set'}</h3>
+                  <h3>{editingTrade ? 'Manage Trade Set' : 'Create Trade Set'}</h3>
                   <button type="button" className="ghost" onClick={closeTradeDialog}>Close</button>
                 </div>
-                <form className="market-form" onSubmit={saveSessionTrade} onPaste={(event) => void handleChartImagePaste(event)}>
+                {activeTradeItem?.telegramStructuredImport ? (
+                  <div className="market-form">
+                    <fieldset>
+                      <legend>{toStructuredHeading(activeTradeItem)}</legend>
+                      <label>
+                        Trade Details
+                        <div className="chart-preview-placeholder">
+                          {activeTradeItem.tradeStage && <p><strong>Stage:</strong> {activeTradeItem.tradeStage}</p>}
+                          <p><strong>Method:</strong> {activeTradeItem.tradeMethod ?? activeTradeItem.strategy}</p>
+                          {getStructuredTradeDetails(activeTradeItem).map((detail) => <p key={detail}>{detail}</p>)}
+                        </div>
+                      </label>
+                      <label>
+                        Confluences
+                        <div className="chart-preview-placeholder">
+                          <p><strong>Main Confluences</strong></p>
+                          {(activeTradeItem.mainConfluences ?? []).map((item) => <p key={`main-${item}`}>{item}</p>)}
+                          <p><strong>Additional Confluences</strong></p>
+                          {(activeTradeItem.additionalConfluences ?? []).map((item) => <p key={`additional-${item}`}>{item}</p>)}
+                          <p><strong>Invalidated Confluences</strong></p>
+                          {(activeTradeItem.invalidatedConfluences ?? []).map((item) => <p key={`invalid-${item}`}>{item}</p>)}
+                        </div>
+                      </label>
+                      <label>
+                        Comments
+                        <div className="chart-preview-placeholder">
+                          {(activeTradeItem.commentLines ?? []).length > 0
+                            ? (activeTradeItem.commentLines ?? []).map((item) => <p key={item}>{item}</p>)
+                            : <p>{activeTradeItem.comments ?? '-'}</p>}
+                        </div>
+                      </label>
+                      <label>
+                        AI Opinion
+                        <textarea rows={4} readOnly value={activeTradeItem.expertOpinion ?? ''} />
+                      </label>
+                      {(activeTradeChartUrl || activeTradeItem.chartImageData || activeTradeItem.chartLink) && (
+                        <div className="chart-preview-square" aria-label="Chart preview">
+                          {activeTradeChartUrl ? (
+                            <img src={activeTradeChartUrl} alt="Trade chart" />
+                          ) : activeTradeItem.chartImageData ? (
+                            <img src={activeTradeItem.chartImageData} alt="Trade chart" />
+                          ) : isImageLikeUrl(activeTradeItem.chartLink ?? '') ? (
+                            <img src={activeTradeItem.chartLink} alt="Trade chart" />
+                          ) : (
+                            <div className="chart-preview-placeholder">
+                              <p>Preview unavailable for this link.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </fieldset>
+                    <div className="form-footer">
+                      <span />
+                      <div className="inline-actions">
+                        {editingTrade && <button type="button" className="ghost" onClick={deleteTrade}>Delete</button>}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                <form className="market-form" onSubmit={saveTrade} onPaste={(event) => void handleChartImagePaste(event)}>
                   <fieldset>
                     <legend>Trade Set</legend>
                   <div className="grid-3">
@@ -2346,10 +2353,12 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                       Remove pasted image
                     </button>
                   )}
-                  {(tradeForm.chartImageData || tradeForm.chartLink.trim().length > 0) && (
+                  {(tradeForm.chartImageData || tradeForm.chartLink.trim().length > 0 || activeTradeChartUrl) && (
                     <div className="chart-preview-square" aria-label="Chart preview">
                       {tradeForm.chartImageData ? (
                         <img src={tradeForm.chartImageData} alt="Pasted trade chart" />
+                      ) : activeTradeChartUrl ? (
+                        <img src={activeTradeChartUrl} alt="Trade chart" />
                       ) : isImageLikeUrl(tradeForm.chartLink) ? (
                         <img src={tradeForm.chartLink} alt="Trade chart" />
                       ) : (
@@ -2373,33 +2382,15 @@ function TradingDashboard({ email, onSignOut }: { email: string; onSignOut?: (()
                   <div className="form-footer">
                     <span />
                     <div className="inline-actions">
-                      {editingSessionTrade && <button type="button" className="ghost" onClick={deleteSessionTrade}>Delete</button>}
-                      <button type="submit" disabled={busy}>{editingSessionTrade ? 'Update Trade' : 'Save Trade'}</button>
+                      {editingTrade && <button type="button" className="ghost" onClick={deleteTrade}>Delete</button>}
+                      <button type="submit" disabled={busy}>{editingTrade ? 'Update Trade' : 'Save Trade'}</button>
                     </div>
                   </div>
                 </form>
+                )}
               </div>
             </div>
           )}
-
-      {tradingDayDialogOpen && (
-        <div className="dialog-backdrop" role="dialog" aria-modal="true">
-          <div className="dialog-card">
-            <div className="panel-header">
-              <h3>Create Trading Day</h3>
-              <button type="button" className="ghost" onClick={() => setTradingDayDialogOpen(false)}>Close</button>
-            </div>
-            <form className="market-form" onSubmit={saveTradingDay}>
-              <div className="grid-3">
-                <label>Date<input type="date" value={tradingDayForm.tradingDate} onChange={(event) => setTradingDayForm((prev) => ({ ...prev, tradingDate: event.target.value }))} required /></label>
-                <label>Title<input value={tradingDayForm.title} onChange={(event) => setTradingDayForm((prev) => ({ ...prev, title: event.target.value }))} placeholder="Optional day title" /></label>
-              </div>
-              <label>Notes<textarea rows={3} value={tradingDayForm.notes} onChange={(event) => setTradingDayForm((prev) => ({ ...prev, notes: event.target.value }))} /></label>
-              <div className="form-footer"><span /><button type="submit" disabled={busy}>Save Trading Day</button></div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {activeTab === 'confluences' && (
         <section className="panel">
